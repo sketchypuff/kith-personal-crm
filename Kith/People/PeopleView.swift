@@ -64,6 +64,7 @@ struct PeopleView: View {
                 }
             }
             .navigationTitle("People")
+            .toolbarTitleDisplayMode(.inline)
             .navigationDestination(for: Person.self) { person in
                 ContactDetailView(person: person)
             }

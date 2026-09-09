@@ -8,7 +8,7 @@ struct KithApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootTabView()
+            AppLockGate()   // wraps RootTabView; nothing renders behind the privacy lock
                 .environment(coordinator)
                 .environment(contactImages)
                 .modelContainer(coordinator.container)

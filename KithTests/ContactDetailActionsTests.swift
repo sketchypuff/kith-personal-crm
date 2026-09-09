@@ -18,15 +18,14 @@ struct ContactDetailActionsTests {
         calendar.date(bySettingHour: 9, minute: 30, second: 0, of: now)!
     }
 
-    private func actions(reachOuts: Bool = true, keyDates: Bool = true) -> ContactDetailActions {
+    private func actions(notificationsEnabled: Bool = true) -> ContactDetailActions {
         ContactDetailActions(
             context: container.mainContext,
             notifications: NotificationScheduler(recorder: recorder),
             now: { now },
             calendar: calendar,
             defaultReminderTime: { reminderTime },
-            reachOutRemindersEnabled: { reachOuts },
-            keyDateRemindersEnabled: { keyDates }
+            notificationsEnabled: { notificationsEnabled }
         )
     }
 
@@ -73,9 +72,9 @@ struct ContactDetailActionsTests {
         #expect(recorder.cancelled.contains(p.reachOutNotificationID))
     }
 
-    @Test func reachOutCategoryOffSchedulesNothing() {
+    @Test func notificationsOffSchedulesNoReachOut() {
         let p = person()
-        actions(reachOuts: false).notifyDidChange(p)
+        actions(notificationsEnabled: false).notifyDidChange(p)
         #expect(recorder.pending.isEmpty)
     }
 
@@ -183,10 +182,10 @@ struct ContactDetailActionsTests {
         #expect(recorder.pending.isEmpty)
     }
 
-    @Test func keyDateCategoryOffSchedulesNothing() {
+    @Test func notificationsOffSchedulesNoKeyDateReminders() {
         let p = person()
         let draft = KeyDateDraft(type: .anniversary, month: 9, day: 20)
-        actions(keyDates: false).addKeyDate(draft, to: p)
+        actions(notificationsEnabled: false).addKeyDate(draft, to: p)
         #expect(recorder.pending.isEmpty)
     }
 

@@ -37,7 +37,10 @@ Do not pass `CODE_SIGNING_ALLOWED=NO`: it strips the App Group entitlement and S
 - **People** roster end to end (`Kith/People`): in-memory A–Z sectioning (`PeopleRoster`), search + filter, count footer, three empty states, and the app's only delete (`PeopleActions`). The swipe Delete button is red-tinted but deliberately **not** `role: .destructive` — a destructive swipe button makes `List` dismiss the row before the confirmation dialog can present.
 - `CatchupStatus` (`Kith/Models`) is the one home for the next-catchup line; the roster row and Contact Detail both derive from it.
 - **Contact Detail** end to end (`Kith/ContactDetail`): header + live Notify editing (bindings write to the model, `ContactDetailActions.notifyDidChange` reschedules the reach-out), Dates with the `KeyDateEditorView` sheet and swipe-to-delete, Tags as rows, debounced Notes, and the read-only Timeline (`TimelineEntry` merges touches + skip markers). `NotificationScheduler` now schedules reach-out and key-date lead/day-of requests; `NotificationRecorder` is the test hook for asserting on IDs and fire dates.
-- `SettingsView` is a **placeholder** pending its spec. The two notification category switches it will own are already read via `AppPreferences.notifyReachOutsEnabled` / `notifyKeyDatesEnabled` (default on).
+- **Settings** end to end (`Kith/Settings`): one flat `Form` of section views, each bound to `@AppStorage` on `AppPreferences.store`. `SettingsActions` owns the two side effects: the all-people notification pass and the sync rebuild (writes the preference only after `ModelContainerCoordinator.rebuild` succeeds). Notification-preference changes are coalesced in `SettingsView` with a short settle delay before one pass. The developer card's bio, links, and `DeveloperAvatar` image set are placeholders (`DeveloperProfile`).
+- **Privacy lock** (`Kith/Lock`): `AppLockGate` wraps `RootTabView` in `KithApp`; while locked the tab tree is not in the hierarchy at all, so unlocking lands on Today. `AppLockState` is the `scenePhase` state machine (grace period measured from the first resign while unlocked; the switch is snapshotted at resign so enabling the lock during its own Face ID prompt doesn't lock the user out). `LockAuthenticator` is the only `LAContext` wrapper.
+- `NotificationPlanner` (`Kith/Notifications`) is the single home for which requests a person should have and when. Contact Detail and Settings both go through it; `rescheduleAll` sorts by fire date and stops at `pendingLimit` (60), the seed of the rolling scheduler. It is not yet run on launch or background refresh.
+- Every `AppPreferences` reader has an `(in: UserDefaults)` twin so actions can be tested against a throwaway suite. `syncEnabled` defaults to on only when `ModelContainerCoordinator.isICloudAvailable`.
 - One model addition beyond the Data Model spec: `KeyDate.lastHandledAt: Date?` — required by Home §5 ("handled until next recurrence"); optional, so CloudKit-safe.
 
 ## Specs are the source of truth
@@ -70,7 +73,7 @@ SwiftData + CloudKit private DB forbids things plain SwiftData allows. Every mod
 
 ### Two stores, deliberately split
 - **SwiftData store** (App Group `group.com.yash.kith`) — people and their children. Synced when sync is on. Read by the widget.
-- **`UserDefaults` in the same App Group** via `@AppStorage` — all Settings values (default reminder time, notification category switches, new-contact cadence defaults, lock, sync flag). **Device-local, never synced.** The sync toggle can't live in the store it toggles.
+- **`UserDefaults` in the same App Group** via `@AppStorage` — all Settings values (default reminder time, the single notifications switch, new-contact cadence defaults, lock, sync flag). **Device-local, never synced.** The sync toggle can't live in the store it toggles.
 
 ### Sync toggle rebuilds the container
 Sync on/off is a different `ModelConfiguration(cloudKitDatabase: .private("iCloud.com.yash.kith") vs .none)`, not a runtime flag. An app-level `@Observable` coordinator owns the container and republishes it into the environment. Turning sync off leaves the iCloud copy intact.

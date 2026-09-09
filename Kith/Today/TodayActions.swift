@@ -6,6 +6,9 @@ struct TodayActions {
     let context: ModelContext
     let notifications: NotificationScheduler
     var now: () -> Date = { .now }
+    /// The Settings notifications switch: off means no remind-me-tomorrow
+    /// nudge is scheduled either. The hold itself still applies.
+    var notificationsEnabled: () -> Bool = { AppPreferences.notificationsEnabled }
 
     /// Check on a person row: Touch dated now, clock reset, hold cleared.
     @discardableResult
@@ -58,7 +61,9 @@ struct TodayActions {
         person.remindOn = tomorrow.addingTimeInterval(-1)
         let fireAt = CadenceEngine.applying(time: person.notifyTime, to: tomorrow, calendar: calendar)
         notifications.cancel(ids: [person.reachOutNotificationID])
-        notifications.scheduleRemindTomorrow(for: person, at: fireAt)
+        if notificationsEnabled() {
+            notifications.scheduleRemindTomorrow(for: person, at: fireAt)
+        }
         save()
     }
 

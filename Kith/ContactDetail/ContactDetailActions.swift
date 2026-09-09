@@ -10,8 +10,18 @@ struct ContactDetailActions {
     var now: () -> Date = { .now }
     var calendar: Calendar = .current
     var defaultReminderTime: () -> Date = { AppPreferences.defaultReminderTime }
-    var reachOutRemindersEnabled: () -> Bool = { AppPreferences.notifyReachOutsEnabled }
-    var keyDateRemindersEnabled: () -> Bool = { AppPreferences.notifyKeyDatesEnabled }
+    var notificationsEnabled: () -> Bool = { AppPreferences.notificationsEnabled }
+
+    /// The shared scheduling rules; Settings' all-people pass uses the same planner.
+    private var planner: NotificationPlanner {
+        NotificationPlanner(
+            notifications: notifications,
+            now: now,
+            calendar: calendar,
+            defaultReminderTime: defaultReminderTime,
+            notificationsEnabled: notificationsEnabled
+        )
+    }
 
     // MARK: - Notify
 
@@ -22,17 +32,9 @@ struct ContactDetailActions {
         save()
     }
 
-    /// Idempotent: cancels the reach-out request, then re-adds it at the next
-    /// due moment. A past due date gets no request (the person is already
-    /// overdue and surfaces on Today); Never cancels every reach-out nudge.
+    /// See `NotificationPlanner.rescheduleReachOut(for:)`.
     func rescheduleReachOut(for person: Person) {
-        guard person.cadence != .never else {
-            notifications.cancel(ids: [person.reachOutNotificationID, person.remindTomorrowNotificationID])
-            return
-        }
-        notifications.cancel(ids: [person.reachOutNotificationID])
-        guard reachOutRemindersEnabled(), let due = person.nextDue, due > now() else { return }
-        notifications.scheduleReachOut(for: person, at: due)
+        planner.rescheduleReachOut(for: person)
     }
 
     // MARK: - Key dates
@@ -64,30 +66,9 @@ struct ContactDetailActions {
         save()
     }
 
-    /// Lead and day-of requests for the next occurrence, at the Settings
-    /// default reminder time, subject to the date's own toggle and the
-    /// Settings key-date category switch. Fire times already in the past are
-    /// skipped rather than delivered immediately.
+    /// See `NotificationPlanner.rescheduleReminders(for:person:)`.
     func rescheduleReminders(for keyDate: KeyDate, person: Person) {
-        notifications.cancel(ids: [keyDate.leadNotificationID, keyDate.dayOfNotificationID])
-        guard keyDate.reminderEnabled, keyDateRemindersEnabled(),
-              let occurrence = keyDate.nextOccurrence(from: now(), calendar: calendar) else { return }
-
-        let current = now()
-        let time = defaultReminderTime()
-
-        if keyDate.leadTimeDays > 0 {
-            let leadDay = KeyDateEngine.windowStart(for: occurrence, leadTimeDays: keyDate.leadTimeDays, calendar: calendar)
-            let leadFireAt = CadenceEngine.applying(time: time, to: leadDay, calendar: calendar)
-            if leadFireAt > current {
-                notifications.scheduleKeyDateLead(keyDate, for: person, daysAhead: keyDate.leadTimeDays, at: leadFireAt)
-            }
-        }
-
-        let dayFireAt = CadenceEngine.applying(time: time, to: occurrence, calendar: calendar)
-        if dayFireAt > current {
-            notifications.scheduleKeyDateDay(keyDate, for: person, at: dayFireAt)
-        }
+        planner.rescheduleReminders(for: keyDate, person: person)
     }
 
     // MARK: - Tags
