@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Identity and reassurance (Settings §8): name, version, the privacy promise,
-/// and the one row that opens the developer card. Static content, no keys.
+/// Identity rows (Settings §8): name, version, the developer card, and — once
+/// the listing exists — a link to leave an App Store review.
 struct AboutSection: View {
     @State private var isPresentingDeveloper = false
 
@@ -12,12 +12,19 @@ struct AboutSection: View {
 
             Button(action: showDeveloper) {
                 HStack {
-                    Label("About the developer", systemImage: "person.crop.circle")
+                    Label("Made by \(DeveloperProfile.name)", systemImage: "person.crop.circle")
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.footnote.bold())
                         .foregroundStyle(.tertiary)
                         .accessibilityHidden(true)
+                }
+                .foregroundStyle(.primary)
+            }
+
+            if let reviewURL = AppStoreListing.writeReviewURL {
+                Link(destination: reviewURL) {
+                    Label("Review in App Store", systemImage: "star")
                 }
                 .foregroundStyle(.primary)
             }
