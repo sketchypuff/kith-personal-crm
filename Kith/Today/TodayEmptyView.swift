@@ -14,8 +14,12 @@ struct TodayEmptyView: View {
             } description: {
                 Text("Add someone from Contacts to start staying in touch.")
             } actions: {
-                Button("Add Someone", action: onAdd)
+                // First run has no toolbar +, so this is the only way in:
+                // the large control size makes it the screen's obvious target.
+                Button("Add Contact", action: onAdd)
                     .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .font(.headline)
             }
         } else if feed.isEmpty {
             ContentUnavailableView {

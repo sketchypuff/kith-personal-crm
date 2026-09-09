@@ -89,9 +89,13 @@ struct TodayView: View {
                 ContactDetailView(person: route.person, showsAlreadyInKithNote: true)
             }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Add", systemImage: "plus", action: beginAdd)
-                        .buttonStyle(.borderedProminent)   // the screen's primary CTA, accent-tinted
+                // Hidden on first run: the empty state's Add Contact button is
+                // the single call to action until someone has been added.
+                if !people.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Add", systemImage: "plus", action: beginAdd)
+                            .buttonStyle(.borderedProminent)   // the screen's primary CTA, accent-tinted
+                    }
                 }
             }
             .addContactFlow($addFlow, onDuplicate: showExisting)

@@ -72,11 +72,15 @@ struct PeopleView: View {
                 ContactDetailView(person: route.person, showsAlreadyInKithNote: true)
             }
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    PeopleFilterMenu(filter: $filter, tags: roster.allTags)
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Add", systemImage: "plus", action: beginAdd)
+                // Both are hidden on first run: there is nothing to filter, and
+                // the empty state's Add Contact button is the single call to action.
+                if !people.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        PeopleFilterMenu(filter: $filter, tags: roster.allTags)
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Add", systemImage: "plus", action: beginAdd)
+                    }
                 }
             }
             .addContactFlow($addFlow, onDuplicate: showExisting)
