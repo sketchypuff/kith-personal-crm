@@ -22,6 +22,7 @@ enum AppPreferences {
         static let notificationsEnabled = "notificationsEnabled"     // the one notifications switch
         static let lockEnabled = "lockEnabled"                       // privacy lock (Settings §6.1)
         static let lockGracePeriod = "lockGracePeriod"               // LockGracePeriod raw value (Settings §6.2)
+        static let appTheme = "appTheme"                             // AppTheme raw value; default system
     }
 
     // MARK: - App Group suite
@@ -33,6 +34,7 @@ enum AppPreferences {
     static var newContactNotifyDay: Weekday { newContactNotifyDay(in: store) }
     static var lockEnabled: Bool { lockEnabled(in: store) }
     static var lockGracePeriod: LockGracePeriod { lockGracePeriod(in: store) }
+    static var appTheme: AppTheme { appTheme(in: store) }
 
     // MARK: - Explicit suite
 
@@ -69,5 +71,9 @@ enum AppPreferences {
 
     static func lockGracePeriod(in store: UserDefaults) -> LockGracePeriod {
         LockGracePeriod(rawValue: store.integer(forKey: Key.lockGracePeriod)) ?? .immediately
+    }
+
+    static func appTheme(in store: UserDefaults) -> AppTheme {
+        AppTheme(rawValue: store.string(forKey: Key.appTheme) ?? "") ?? .system
     }
 }

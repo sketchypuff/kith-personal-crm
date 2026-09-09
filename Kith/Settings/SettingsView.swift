@@ -28,6 +28,7 @@ struct SettingsView: View {
         Form {
             NotificationDefaultsSection(notificationsDenied: notificationsDenied, onChange: notificationsDidChange)
             Section {
+                ThemeRow()
                 PrivacyLockRows(availability: lockAvailability)
                 SyncRows(iCloudAvailable: iCloudAvailable)
             } header: {
