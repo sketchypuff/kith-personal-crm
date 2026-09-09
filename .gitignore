@@ -1,0 +1,15 @@
+# Product specs / PRDs kept in the repo for reference but not tracked
+prds/
+
+# macOS
+.DS_Store
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+*.moved-aside
+*.xccheckout
+*.xcscmblueprint
+.swiftpm/
