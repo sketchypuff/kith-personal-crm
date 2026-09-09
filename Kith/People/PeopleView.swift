@@ -16,6 +16,10 @@ struct PeopleView: View {
     @State private var addFlow = AddContactFlowState()
     @State private var contactsStatus = CNContactStore.authorizationStatus(for: .contacts)
 
+    /// Below this many people the roster fits on one screen, so the search
+    /// field is hidden: scanning is faster than typing at that size.
+    static let searchThreshold = 6
+
     private var actions: PeopleActions {
         PeopleActions(context: modelContext)
     }
@@ -43,9 +47,14 @@ struct PeopleView: View {
                 }
             }
             .listStyle(.plain)
-            .searchable(text: $searchText, prompt: "Search name, notes, tags")
+            .rosterSearchable(text: $searchText, enabled: people.count >= Self.searchThreshold)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
+            // A roster that shrinks back below the threshold takes its query
+            // with it, so the hidden field can't leave the list filtered.
+            .onChange(of: people.count < Self.searchThreshold) { _, hidden in
+                if hidden { searchText = "" }
+            }
             .safeAreaInset(edge: .top, spacing: 0) {
                 if let summary = filter.summary {
                     PeopleFilterStatusBar(summary: summary, onClear: clearFilters)
@@ -117,6 +126,20 @@ struct PeopleView: View {
         guard phase == .active else { return }
         now = .now
         contactsStatus = CNContactStore.authorizationStatus(for: .contacts)
+    }
+}
+
+private extension View {
+    /// `.searchable` has no "hidden" state, so the modifier is applied or not.
+    /// Crossing the threshold rebuilds the list, which is fine: it happens
+    /// once, on the add that crosses it.
+    @ViewBuilder
+    func rosterSearchable(text: Binding<String>, enabled: Bool) -> some View {
+        if enabled {
+            searchable(text: text, prompt: "Search name, notes, tags")
+        } else {
+            self
+        }
     }
 }
 
