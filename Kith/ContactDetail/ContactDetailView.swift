@@ -1,56 +1,175 @@
+import SwiftData
 import SwiftUI
 
-/// Minimal pushed destination until the Contact Detail spec is implemented.
-/// Read-only: no Logged action lives here by design (Contact Detail §8).
+/// The contact sheet: identity and status up top, then live-edit
+/// configuration and the read-only timeline. Pushed, never modal.
+///
+/// Read-and-configure only: no Logged, no Remind/Skip, no delete here
+/// (Contact Detail §8). Everything that advances the clock is a Today action.
 struct ContactDetailView: View {
-    let person: Person
+    @Bindable var person: Person
     var showsAlreadyInKithNote = false
 
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+
+    @State private var now = Date.now
+    @State private var segment: ContactDetailSegment = .info
+    @State private var keyDateEditor: KeyDateEditorItem?
+    @State private var hasDismissedNote = false
+
+    private var actions: ContactDetailActions {
+        ContactDetailActions(context: modelContext, notifications: NotificationScheduler())
+    }
+
     var body: some View {
+        let status = person.catchupStatus(at: now)
+        let keyDates = DatesSection.ordered(person.keyDates ?? [], now: now)
+        let timeline = TimelineEntry.build(for: person)
+
         List {
             Section {
-                HStack(spacing: 16) {
-                    ContactAvatarView(
-                        name: person.name,
-                        initials: person.initials,
-                        contactID: person.linkedContactID,
-                        size: 64
-                    )
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(person.name)
-                            .font(.title2.weight(.semibold))
-                        Text(catchupLine)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                ContactDetailHeader(person: person, status: status, now: now)
+                Picker("Show", selection: $segment) {
+                    ForEach(ContactDetailSegment.allCases) { segment in
+                        Text(segment.rawValue).tag(segment)
                     }
                 }
-                .padding(.vertical, 4)
+                .pickerStyle(.segmented)
             }
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
+            .listRowSeparator(.hidden)
 
-            if showsAlreadyInKithNote {
+            if showsAlreadyInKithNote && !hasDismissedNote {
                 Section {
                     Label("Already in Kith", systemImage: "checkmark.circle")
                         .foregroundStyle(.secondary)
                 }
             }
 
-            Section("Notify") {
-                LabeledContent("How often", value: person.cadence.label)
-                if person.cadence.usesNotifyDay {
-                    LabeledContent("Day", value: person.notifyDay.label)
-                }
-                if person.cadence != .never {
-                    LabeledContent("Time", value: person.notifyTime.formatted(date: .omitted, time: .shortened))
-                }
+            switch segment {
+            case .info:
+                NotifySection(person: person)
+
+                DatesSection(
+                    keyDates: keyDates,
+                    now: now,
+                    onAdd: addKeyDate,
+                    onEdit: editKeyDate,
+                    onDelete: deleteKeyDate
+                )
+
+                TagsSection(tags: person.tags, onAdd: addTag, onRemove: removeTag)
+
+                NotesSection(person: person, onCommit: commitNotes)
+
+            case .timeline:
+                TimelineSection(entries: timeline)
             }
         }
+        .listStyle(.insetGrouped)
+        .animation(.default, value: segment)
         .navigationTitle(person.name)
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbarTitleDisplayMode(.inline)
+        .sheet(item: $keyDateEditor) { item in
+            KeyDateEditorView(item: item) { draft in
+                saveKeyDate(draft, for: item)
+            }
+        }
+        .onChange(of: person.cadenceRaw) { notifyDidChange() }
+        .onChange(of: person.notifyDayRaw) { notifyDidChange() }
+        .onChange(of: person.notifyTime) { notifyDidChange() }
+        .onChange(of: scenePhase) { _, phase in
+            handleScenePhase(phase)
+        }
+        .task {
+            await dismissNoteAfterDelay()
+        }
     }
 
-    /// Contact Detail Appendix formatting, shared with the roster row.
-    private var catchupLine: String {
-        let now = Date.now
-        return person.catchupStatus(at: now).detailLabel(now: now)
+    // MARK: - Actions
+
+    /// Notify edits write through the binding; this persists and realigns
+    /// the reach-out nudge. The header recomputes from the model on its own.
+    private func notifyDidChange() {
+        withAnimation {
+            actions.notifyDidChange(person)
+        }
     }
+
+    private func addKeyDate(_ type: KeyDateType) {
+        keyDateEditor = .new(type)
+    }
+
+    private func editKeyDate(_ keyDate: KeyDate) {
+        keyDateEditor = .edit(keyDate)
+    }
+
+    private func deleteKeyDate(_ keyDate: KeyDate) {
+        withAnimation {
+            actions.deleteKeyDate(keyDate)
+        }
+    }
+
+    private func saveKeyDate(_ draft: KeyDateDraft, for item: KeyDateEditorItem) {
+        withAnimation {
+            switch item {
+            case .new:
+                actions.addKeyDate(draft, to: person)
+            case .edit(let keyDate):
+                actions.updateKeyDate(keyDate, with: draft)
+            }
+        }
+    }
+
+    private func addTag(_ tag: String) -> Bool {
+        withAnimation {
+            actions.addTag(tag, to: person)
+        }
+    }
+
+    private func removeTag(_ tag: String) {
+        withAnimation {
+            actions.removeTag(tag, from: person)
+        }
+    }
+
+    private func commitNotes(_ notes: String) {
+        actions.commitNotes(notes, for: person)
+    }
+
+    /// The duplicate-guard note is transient (Contact Detail §7).
+    private func dismissNoteAfterDelay() async {
+        guard showsAlreadyInKithNote else { return }
+        try? await Task.sleep(for: .seconds(4))
+        guard !Task.isCancelled else { return }
+        withAnimation { hasDismissedNote = true }
+    }
+
+    /// Foregrounding refreshes the clock so the header stays honest.
+    private func handleScenePhase(_ phase: ScenePhase) {
+        guard phase == .active else { return }
+        now = .now
+    }
+}
+
+#Preview("Overdue") {
+    let container = SampleData.previewContainer()
+    let person = SampleData.previewPerson(named: "Maya Patel", in: container)
+    NavigationStack {
+        ContactDetailView(person: person)
+    }
+    .modelContainer(container)
+    .environment(ContactImageCache())
+}
+
+#Preview("Never, dates only") {
+    let container = SampleData.previewContainer()
+    let person = SampleData.previewPerson(named: "Dev Kapoor", in: container)
+    NavigationStack {
+        ContactDetailView(person: person, showsAlreadyInKithNote: true)
+    }
+    .modelContainer(container)
+    .environment(ContactImageCache())
 }

@@ -65,6 +65,8 @@ enum SampleData {
         noor.lastLoggedAt = daysAgo(20)
         noor.remindOn = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now))
 
+        maya.notes = "Loves hiking. Moving to Berlin in October — ask how the flat hunt is going."
+
         for person in [maya, arjun, sam, priya, dev, leah, noor] {
             context.insert(person)
         }
@@ -74,7 +76,36 @@ enum SampleData {
         for date in [priyaBirthday, devAnniversary, leahDate] {
             context.insert(date)
         }
+
+        // History so the contact sheet's timeline has touches and a skip to show.
+        let history: [(Person, Date, String?)] = [
+            (maya, daysAgo(12), "Coffee at Blue Bottle; she got the Berlin offer."),
+            (maya, daysAgo(26), nil),
+            (arjun, daysAgo(50), "Intro'd him to Sam for the design role."),
+            (priya, daysAgo(1), nil),
+            (noor, daysAgo(20), "Ask about the new job next time."),
+        ]
+        for (person, date, note) in history {
+            let touch = Touch(date: date, note: note)
+            touch.person = person
+            context.insert(touch)
+        }
+        let mayaSkip = SkipMarker(date: daysAgo(40))
+        mayaSkip.person = maya
+        context.insert(mayaSkip)
+
         try? context.save()
+    }
+
+    /// The seeded person with this name, for previews of per-person screens.
+    static func previewPerson(named name: String, in container: ModelContainer) -> Person {
+        let descriptor = FetchDescriptor<Person>(predicate: #Predicate { $0.name == name })
+        if let person = try? container.mainContext.fetch(descriptor).first {
+            return person
+        }
+        let fallback = Person(name: name, linkedContactID: "")
+        container.mainContext.insert(fallback)
+        return fallback
     }
 
     static func seedCaughtUp(into context: ModelContext, now: Date = .now) {

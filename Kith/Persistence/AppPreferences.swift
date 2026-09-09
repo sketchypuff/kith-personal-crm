@@ -14,6 +14,18 @@ enum AppPreferences {
         static let defaultReminderTime = "defaultReminderTime"      // TimeInterval since reference date
         static let newContactCadence = "newContactCadence"          // Cadence raw value
         static let newContactNotifyDay = "newContactNotifyDay"      // Weekday raw value
+        static let notifyReachOutsEnabled = "notifyReachOutsEnabled" // category switch (Settings §4.2)
+        static let notifyKeyDatesEnabled = "notifyKeyDatesEnabled"   // category switch (Settings §4.2)
+    }
+
+    /// Category switches default to on. `bool(forKey:)` reads a missing key as
+    /// false, so an absent value has to be treated as true explicitly.
+    static var notifyReachOutsEnabled: Bool {
+        store.object(forKey: Key.notifyReachOutsEnabled) as? Bool ?? true
+    }
+
+    static var notifyKeyDatesEnabled: Bool {
+        store.object(forKey: Key.notifyKeyDatesEnabled) as? Bool ?? true
     }
 
     static var syncEnabled: Bool {
