@@ -34,7 +34,9 @@ Do not pass `CODE_SIGNING_ALLOWED=NO`: it strips the App Group entitlement and S
 - Data model (`Kith/Models`), `CadenceEngine` / `KeyDateEngine` (`Kith/Cadence`), container coordinator + App Group preferences (`Kith/Persistence`).
 - **Today** screen end to end (`Kith/Today`): ranked feed, conditional segments, check + undo, Remind me tomorrow / Skip, caught-up state, contact avatar cache.
 - **Add Contact** flow (`Kith/AddContact`): picker → duplicate guard → Setup sheet.
-- `PeopleView`, `SettingsView`, and `ContactDetailView` are **placeholders** pending their specs.
+- **People** roster end to end (`Kith/People`): in-memory A–Z sectioning (`PeopleRoster`), search + filter, count footer, three empty states, and the app's only delete (`PeopleActions`). The swipe Delete button is red-tinted but deliberately **not** `role: .destructive` — a destructive swipe button makes `List` dismiss the row before the confirmation dialog can present.
+- `CatchupStatus` (`Kith/Models`) is the one home for the next-catchup line; the roster row and Contact Detail both derive from it.
+- `SettingsView` and `ContactDetailView` are **placeholders** pending their specs.
 - One model addition beyond the Data Model spec: `KeyDate.lastHandledAt: Date?` — required by Home §5 ("handled until next recurrence"); optional, so CloudKit-safe.
 
 ## Specs are the source of truth

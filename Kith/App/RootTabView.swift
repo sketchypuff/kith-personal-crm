@@ -11,9 +11,7 @@ struct RootTabView: View {
                 TodayView()   // owns its own NavigationStack (needs the path for the duplicate-guard push)
             }
             Tab("People", systemImage: "person.2", value: .people) {
-                NavigationStack {
-                    PeopleView()
-                }
+                PeopleView()   // owns its own NavigationStack, same reason as Today
             }
             Tab("Settings", systemImage: "gearshape", value: .settings) {
                 NavigationStack {

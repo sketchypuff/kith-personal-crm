@@ -1,13 +1,128 @@
+import Contacts
+import SwiftData
 import SwiftUI
 
-/// Placeholder until the People (Roster) spec is implemented.
+/// The roster: everyone in Kith, A–Z, with search, filter, add, and the app's
+/// only delete. It finds, opens, adds, and removes — it never logs, snoozes, or skips.
 struct PeopleView: View {
-    var body: some View {
-        ContentUnavailableView(
-            "People",
-            systemImage: "person.2",
-            description: Text("The roster arrives with the People flow.")
-        )
-        .navigationTitle("People")
+    @Query(sort: \Person.name) private var people: [Person]   // ordering is redone in memory
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+
+    @State private var path = NavigationPath()
+    @State private var searchText = ""
+    @State private var filter = RosterFilter()
+    @State private var now = Date.now
+    @State private var addFlow = AddContactFlowState()
+    @State private var contactsStatus = CNContactStore.authorizationStatus(for: .contacts)
+
+    private var actions: PeopleActions {
+        PeopleActions(context: modelContext)
     }
+
+    var body: some View {
+        let roster = PeopleRoster.build(people: people, searchText: searchText, filter: filter, now: now)
+
+        NavigationStack(path: $path) {
+            List {
+                ForEach(roster.sections) { section in
+                    Section(section.letter) {
+                        ForEach(section.entries) { entry in
+                            PeopleRow(entry: entry, now: now) {
+                                delete(entry.person)
+                            }
+                        }
+                    }
+                }
+                if !roster.isEmpty {
+                    // Contacts-style trailing footer that scrolls with the content.
+                    Section {
+                    } footer: {
+                        PeopleCountFooter(count: roster.visibleCount, filterSummary: filter.summary)
+                    }
+                }
+            }
+            .listStyle(.plain)
+            .searchable(text: $searchText, prompt: "Search name, notes, tags")
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if let summary = filter.summary {
+                    PeopleFilterStatusBar(summary: summary, onClear: clearFilters)
+                }
+            }
+            .overlay {
+                if roster.isEmpty {
+                    PeopleEmptyView(
+                        hasPeople: !people.isEmpty,
+                        searchText: searchText,
+                        filter: filter,
+                        contactsStatus: contactsStatus,
+                        onAdd: beginAdd,
+                        onClearFilters: clearFilters
+                    )
+                }
+            }
+            .navigationTitle("People")
+            .navigationDestination(for: Person.self) { person in
+                ContactDetailView(person: person)
+            }
+            .navigationDestination(for: ExistingPersonRoute.self) { route in
+                ContactDetailView(person: route.person, showsAlreadyInKithNote: true)
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    PeopleFilterMenu(filter: $filter, tags: roster.allTags)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Add", systemImage: "plus", action: beginAdd)
+                }
+            }
+            .addContactFlow($addFlow, onDuplicate: showExisting)
+        }
+        .animation(.default, value: filter)
+        .onChange(of: scenePhase) { _, phase in
+            handleScenePhase(phase)
+        }
+    }
+
+    // MARK: - Actions
+
+    private func beginAdd() {
+        addFlow.begin()
+    }
+
+    private func clearFilters() {
+        filter.clear()
+    }
+
+    private func delete(_ person: Person) {
+        withAnimation {
+            actions.delete(person)
+        }
+    }
+
+    private func showExisting(_ person: Person) {
+        path.append(ExistingPersonRoute(person: person))
+    }
+
+    /// Foregrounding refreshes the clock and re-reads Contacts permission
+    /// (the user may have just returned from Settings).
+    private func handleScenePhase(_ phase: ScenePhase) {
+        guard phase == .active else { return }
+        now = .now
+        contactsStatus = CNContactStore.authorizationStatus(for: .contacts)
+    }
+}
+
+#Preview("Roster") {
+    PeopleView()
+        .modelContainer(SampleData.previewContainer())
+        .environment(ContactImageCache())
+}
+
+#Preview("Empty") {
+    PeopleView()
+        .modelContainer(ModelContainerCoordinator.inMemory())
+        .environment(ContactImageCache())
 }

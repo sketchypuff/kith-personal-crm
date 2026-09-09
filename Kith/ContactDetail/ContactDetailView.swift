@@ -48,19 +48,9 @@ struct ContactDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    /// Contact Detail Appendix formatting.
+    /// Contact Detail Appendix formatting, shared with the roster row.
     private var catchupLine: String {
-        guard person.cadence != .never, let due = person.nextDue else {
-            return "No catchup scheduled"
-        }
         let now = Date.now
-        if person.isSnoozed(at: now) { return "Snoozed to tomorrow" }
-        if now > due {
-            let days = CadenceEngine.daysOverdue(due: due, now: now)
-            return days == 0 ? "Due today" : "\(days)d overdue"
-        }
-        let day = due.formatted(Date.FormatStyle().weekday(.abbreviated).day().month(.abbreviated))
-        let time = due.formatted(date: .omitted, time: .shortened)
-        return "Next catchup · \(day), \(time)"
+        return person.catchupStatus(at: now).detailLabel(now: now)
     }
 }
