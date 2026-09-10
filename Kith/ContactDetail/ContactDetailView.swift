@@ -5,7 +5,7 @@ import SwiftUI
 /// configuration and the read-only timeline. Pushed, never modal.
 ///
 /// Read-and-configure only: no Logged, no Remind/Skip, no delete here
-/// (Contact Detail §8). Everything that advances the clock is a Today action.
+/// (Contact Detail §8). Everything that advances the clock is a Upcoming action.
 struct ContactDetailView: View {
     @Bindable var person: Person
     var showsAlreadyInKithNote = false

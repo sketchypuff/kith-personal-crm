@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A roster row: identity first, status second, and a chevron. No check CTA —
-/// logging lives on Today. The row owns its own delete gesture and confirmation.
+/// logging lives on Upcoming. The row owns its own delete gesture and confirmation.
 struct PeopleRow: View {
     let entry: RosterEntry
     let now: Date

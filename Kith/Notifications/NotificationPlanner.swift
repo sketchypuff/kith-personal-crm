@@ -16,14 +16,14 @@ struct NotificationPlanner {
     var notificationsEnabled: () -> Bool = { AppPreferences.notificationsEnabled }
 
     /// Requests scheduled per pass. Leaves headroom under iOS's ~64 cap for
-    /// the Today actions that schedule outside a pass (remind-me-tomorrow).
+    /// the Upcoming actions that schedule outside a pass (remind-me-tomorrow).
     static let pendingLimit = 60
 
     // MARK: - One person
 
     /// Idempotent: cancels the reach-out request, then re-adds it at the next
     /// due moment. A past due date gets no request (the person is already
-    /// overdue and surfaces on Today); Never cancels every reach-out nudge.
+    /// overdue and surfaces on Upcoming); Never cancels every reach-out nudge.
     func rescheduleReachOut(for person: Person) {
         guard person.cadence != .never else {
             notifications.cancel(ids: [person.reachOutNotificationID, person.remindTomorrowNotificationID])
@@ -87,7 +87,7 @@ struct NotificationPlanner {
 
     /// Reconstructs the "Remind me tomorrow" nudge from the hold: the hold ends
     /// at the end of today, and the nudge lands the next day at the person's
-    /// own notify time — the same moment `TodayActions.remindTomorrow` chose.
+    /// own notify time — the same moment `UpcomingActions.remindTomorrow` chose.
     private func plannedRemindTomorrow(for person: Person) -> PlannedNotification? {
         guard notificationsEnabled(), person.cadence != .never,
               let remindOn = person.remindOn, remindOn > now() else { return nil }

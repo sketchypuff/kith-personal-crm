@@ -20,8 +20,8 @@ xcodebuild build -project Kith.xcodeproj -scheme Kith -destination 'platform=iOS
 xcodebuild test -project Kith.xcodeproj -scheme Kith -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 
 # Run one suite / one test
-xcodebuild test -project Kith.xcodeproj -scheme Kith -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:KithTests/TodayFeedTests
-xcodebuild test -project Kith.xcodeproj -scheme Kith -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:KithTests/TodayFeedTests/dateTodaySuppressesDuplicateReachOut
+xcodebuild test -project Kith.xcodeproj -scheme Kith -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:KithTests/UpcomingFeedTests
+xcodebuild test -project Kith.xcodeproj -scheme Kith -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:KithTests/UpcomingFeedTests/dateTodaySuppressesDuplicateReachOut
 
 # Install + launch on a booted simulator with sample people (DEBUG only; seeds only an empty store)
 xcrun simctl install booted <DerivedData>/Build/Products/Debug-iphonesimulator/Kith.app
@@ -32,13 +32,13 @@ Do not pass `CODE_SIGNING_ALLOWED=NO`: it strips the App Group entitlement and S
 
 ### Implemented so far
 - Data model (`Kith/Models`), `CadenceEngine` / `KeyDateEngine` (`Kith/Cadence`), container coordinator + App Group preferences (`Kith/Persistence`).
-- **Today** screen end to end (`Kith/Today`): ranked feed, conditional segments, check + undo, Remind me tomorrow / Skip, caught-up state, contact avatar cache.
+- **Upcoming** screen end to end (`Kith/Upcoming`; the spec still calls it Home / Today): ranked feed, conditional segments, check + undo, Remind me tomorrow / Skip, caught-up state, contact avatar cache. The feed is a **30-day look-ahead** (`UpcomingFeed.horizonDays`) covering key dates and each person's *next* reach-out, due or not; a repeating cadence contributes exactly one row. A key date's `leadTimeDays` now only drives its notification, not its visibility.
 - **Add Contact** flow (`Kith/AddContact`): picker → duplicate guard → Setup sheet.
 - **People** roster end to end (`Kith/People`): in-memory A–Z sectioning (`PeopleRoster`), search + filter, count footer, three empty states, and the app's only delete (`PeopleActions`). The swipe Delete button is red-tinted but deliberately **not** `role: .destructive` — a destructive swipe button makes `List` dismiss the row before the confirmation dialog can present.
 - `CatchupStatus` (`Kith/Models`) is the one home for the next-catchup line; the roster row and Contact Detail both derive from it.
 - **Contact Detail** end to end (`Kith/ContactDetail`): header + live Notify editing (bindings write to the model, `ContactDetailActions.notifyDidChange` reschedules the reach-out), Dates with the `KeyDateEditorView` sheet and swipe-to-delete, Tags as rows, debounced Notes, and the read-only Timeline (`TimelineEntry` merges touches + skip markers). `NotificationScheduler` now schedules reach-out and key-date lead/day-of requests; `NotificationRecorder` is the test hook for asserting on IDs and fire dates.
 - **Settings** end to end (`Kith/Settings`): one flat `Form` of section views, each bound to `@AppStorage` on `AppPreferences.store`. `SettingsActions` owns the two side effects: the all-people notification pass and the sync rebuild (writes the preference only after `ModelContainerCoordinator.rebuild` succeeds). Notification-preference changes are coalesced in `SettingsView` with a short settle delay before one pass. The developer card's bio, links, and `DeveloperAvatar` image set are placeholders (`DeveloperProfile`).
-- **Privacy lock** (`Kith/Lock`): `AppLockGate` wraps `RootTabView` in `KithApp`; while locked the tab tree is not in the hierarchy at all, so unlocking lands on Today. `AppLockState` is the `scenePhase` state machine (grace period measured from the first resign while unlocked; the switch is snapshotted at resign so enabling the lock during its own Face ID prompt doesn't lock the user out). `LockAuthenticator` is the only `LAContext` wrapper.
+- **Privacy lock** (`Kith/Lock`): `AppLockGate` wraps `RootTabView` in `KithApp`; while locked the tab tree is not in the hierarchy at all, so unlocking lands on Upcoming. `AppLockState` is the `scenePhase` state machine (grace period measured from the first resign while unlocked; the switch is snapshotted at resign so enabling the lock during its own Face ID prompt doesn't lock the user out). `LockAuthenticator` is the only `LAContext` wrapper.
 - `NotificationPlanner` (`Kith/Notifications`) is the single home for which requests a person should have and when. Contact Detail and Settings both go through it; `rescheduleAll` sorts by fire date and stops at `pendingLimit` (60), the seed of the rolling scheduler. It is not yet run on launch or background refresh.
 - Every `AppPreferences` reader has an `(in: UserDefaults)` twin so actions can be tested against a throwaway suite. `syncEnabled` defaults to on only when `ModelContainerCoordinator.isICloudAvailable`.
 - One model addition beyond the Data Model spec: `KeyDate.lastHandledAt: Date?` — required by Home §5 ("handled until next recurrence"); optional, so CloudKit-safe.
@@ -51,7 +51,7 @@ Read the relevant spec before implementing a screen. They reconcile each other a
 |---|---|
 | `prds/Personal CRM PRD.md` | Goals, P0 requirements, cadence semantics (Appendix), notification + widget spec |
 | `prds/Data Model & Persistence — Spec.md` | `@Model` definitions, CloudKit constraints, derived values, notification IDs, container setup |
-| `prds/Home Screen (Today) — Flow Spec.md` | Today feed, `TabView` shell, the core-loop actions |
+| `prds/Home Screen (Today) — Flow Spec.md` | The Upcoming feed (named Today in the spec), `TabView` shell, the core-loop actions |
 | `prds/People (Roster) — Flow Spec.md` | Roster, search, filter, swipe-to-delete cascade |
 | `prds/Contact Detail (Contact Sheet) — Flow Spec.md` | Per-person read-and-configure screen |
 | `prds/Add Contact — Flow Spec.md` | Contact picker → duplicate guard → Setup sheet |
@@ -79,7 +79,7 @@ SwiftData + CloudKit private DB forbids things plain SwiftData allows. Every mod
 Sync on/off is a different `ModelConfiguration(cloudKitDatabase: .private("iCloud.com.yashshenai.kith") vs .none)`, not a runtime flag. An app-level `@Observable` coordinator owns the container and republishes it into the environment. Turning sync off leaves the iCloud copy intact.
 
 ### Where actions live (hard boundaries between screens)
-- **Today is the only place a touch is logged.** Logged / Remind me tomorrow / Skip are Today-only (check button + swipe actions). The widget's App Intent may also log.
+- **Upcoming is the only place a touch is logged.** Logged / Remind me tomorrow / Skip are Upcoming-only (check button + swipe actions); the swipe actions only appear on rows that are due or overdue. The widget's App Intent may also log.
 - **Contact Detail is read-and-configure.** Live inline editing, no Edit/Save mode, no Logged, no delete.
 - **People roster is find / open / add / remove.** Swipe-to-delete (confirmed, `allowsFullSwipe: false`) is the **only** removal path in the app. No archive.
 - **Settings is app-level defaults and machinery**, never per-person editing. No "reset all" / "delete all".
@@ -103,7 +103,7 @@ Render the monogram immediately; fetch `thumbnailImageData` off the main thread 
 ## UI constraints
 
 - **Native SwiftUI components only.** No third-party UI kits, no custom design system. `NavigationStack`, `List`, `Form`, SF Symbols, system colors. Dark mode / Dynamic Type / VoiceOver must come for free.
-- iOS 26 `TabView` uses the `Tab("Today", systemImage:) { … }` builder, not `.tabItem`. One `NavigationStack` per tab; Contact Detail is always pushed, never modal.
+- iOS 26 `TabView` uses the `Tab("Upcoming", systemImage:) { … }` builder, not `.tabItem`. One `NavigationStack` per tab; Contact Detail is always pushed, never modal.
 - The one UIKit wrap is `CNContactPickerViewController` via `UIViewControllerRepresentable`, single-select. Don't wrap `UITableView` for the roster.
 - Overdue is shown in an informative tint (secondary orange), never red badges or shaming copy.
 - Empty states use `ContentUnavailableView`.

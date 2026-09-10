@@ -1,6 +1,6 @@
 import Foundation
 
-/// The single home for interval math. Every surface (Today, roster, contact
+/// The single home for interval math. Every surface (Upcoming, roster, contact
 /// sheet, widget, notifications) derives due dates through here so they agree.
 nonisolated enum CadenceEngine {
 

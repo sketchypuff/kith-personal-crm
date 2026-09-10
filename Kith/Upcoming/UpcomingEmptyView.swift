@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// The calm states: nobody added yet, fully caught up, or an empty segment.
-struct TodayEmptyView: View {
-    let feed: TodayFeed
-    let segment: TodaySegment
+struct UpcomingEmptyView: View {
+    let feed: UpcomingFeed
+    let segment: UpcomingSegment
     let hasPeople: Bool
     let onAdd: () -> Void
 
@@ -23,7 +23,7 @@ struct TodayEmptyView: View {
             }
         } else if feed.isEmpty {
             ContentUnavailableView {
-                Label("You're all caught up.", systemImage: "checkmark.circle")
+                Label("Nothing in the next 30 days.", systemImage: "checkmark.circle")
             } description: {
                 if let coverage = feed.coverage {
                     Text("\(coverage, format: .percent.precision(.fractionLength(0))) on track")
@@ -33,9 +33,9 @@ struct TodayEmptyView: View {
             switch segment {
             case .upcoming:
                 ContentUnavailableView(
-                    "No upcoming dates",
+                    "Nothing coming up",
                     systemImage: "calendar",
-                    description: Text("Key dates appear here once they're within their lead time.")
+                    description: Text("Dates and reach-outs appear here 30 days ahead.")
                 )
             case .overdue:
                 ContentUnavailableView(
@@ -43,8 +43,6 @@ struct TodayEmptyView: View {
                     systemImage: "checkmark.circle",
                     description: Text("Everyone is on track.")
                 )
-            case .all:
-                EmptyView()
             }
         }
     }

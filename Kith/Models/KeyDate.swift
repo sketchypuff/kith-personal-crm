@@ -18,7 +18,7 @@ final class KeyDate {
     var leadTimeDays: Int = 3
     var reminderEnabled: Bool = true
 
-    /// When Today's check last marked an occurrence handled. An occurrence is
+    /// When Upcoming's check last marked an occurrence handled. An occurrence is
     /// handled while this falls inside its lead window (Home §5: "handled
     /// until next recurrence"). Optional, so it is CloudKit-safe.
     var lastHandledAt: Date? = nil

@@ -2,7 +2,7 @@ import SwiftData
 import SwiftUI
 
 /// Presents the contact picker, runs the duplicate guard, then the Setup sheet.
-/// Attached to any screen with a + button (Today, People).
+/// Attached to any screen with a + button (Upcoming, People).
 struct AddContactFlowModifier: ViewModifier {
     @Binding var state: AddContactFlowState
     let onDuplicate: (Person) -> Void

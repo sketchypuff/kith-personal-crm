@@ -3,7 +3,7 @@ import SwiftData
 import Testing
 @testable import Kith
 
-struct TodayActionsTests {
+struct UpcomingActionsTests {
     let calendar = Calendar(identifier: .gregorian)
     let container = ModelContainerCoordinator.inMemory()
 
@@ -11,8 +11,8 @@ struct TodayActionsTests {
         calendar.date(from: DateComponents(year: 2026, month: 9, day: 9, hour: 10))!
     }
 
-    private var actions: TodayActions {
-        TodayActions(context: container.mainContext, notifications: NotificationScheduler(), now: { now })
+    private var actions: UpcomingActions {
+        UpcomingActions(context: container.mainContext, notifications: NotificationScheduler(), now: { now })
     }
 
     private func overduePerson() -> Person {

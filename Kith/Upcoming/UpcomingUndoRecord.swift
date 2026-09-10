@@ -1,7 +1,7 @@
 import Foundation
 
-/// Everything needed to reverse one check tap from Today.
-struct TodayUndoRecord: Identifiable {
+/// Everything needed to reverse one check tap from Upcoming.
+struct UpcomingUndoRecord: Identifiable {
     let id = UUID()
     let person: Person
     let touch: Touch

@@ -1,8 +1,8 @@
 import Foundation
 import SwiftData
 
-/// The core-loop mutations. Today is the only place a touch is logged.
-struct TodayActions {
+/// The core-loop mutations. Upcoming is the only place a touch is logged.
+struct UpcomingActions {
     let context: ModelContext
     let notifications: NotificationScheduler
     var now: () -> Date = { .now }
@@ -12,8 +12,8 @@ struct TodayActions {
 
     /// Check on a person row: Touch dated now, clock reset, hold cleared.
     @discardableResult
-    func log(_ person: Person) -> TodayUndoRecord {
-        let record = TodayUndoRecord(
+    func log(_ person: Person) -> UpcomingUndoRecord {
+        let record = UpcomingUndoRecord(
             person: person,
             touch: Touch(date: now()),
             previousLastLoggedAt: person.lastLoggedAt,
@@ -28,8 +28,8 @@ struct TodayActions {
     /// Check on a key-date row: the occurrence is handled until the next
     /// recurrence *and* a touch is logged (wishing happy birthday counts).
     @discardableResult
-    func handle(_ keyDate: KeyDate, for person: Person) -> TodayUndoRecord {
-        let record = TodayUndoRecord(
+    func handle(_ keyDate: KeyDate, for person: Person) -> UpcomingUndoRecord {
+        let record = UpcomingUndoRecord(
             person: person,
             touch: Touch(date: now()),
             previousLastLoggedAt: person.lastLoggedAt,
@@ -43,7 +43,7 @@ struct TodayActions {
     }
 
     /// Reverses a check. Safe to call once per record.
-    func undo(_ record: TodayUndoRecord) {
+    func undo(_ record: UpcomingUndoRecord) {
         let person = record.person
         person.lastLoggedAt = record.previousLastLoggedAt
         person.remindOn = record.previousRemindOn
@@ -52,12 +52,12 @@ struct TodayActions {
         save()
     }
 
-    /// Holds the person out of Today until tomorrow and schedules one next-day nudge.
+    /// Holds the person out of Upcoming until tomorrow and schedules one next-day nudge.
     func remindTomorrow(_ person: Person) {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: now())
         guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) else { return }
-        // Held through the end of today; reappears in Today from tomorrow.
+        // Held through the end of today; reappears in Upcoming from tomorrow.
         person.remindOn = tomorrow.addingTimeInterval(-1)
         let fireAt = CadenceEngine.applying(time: person.notifyTime, to: tomorrow, calendar: calendar)
         notifications.cancel(ids: [person.reachOutNotificationID])
@@ -79,7 +79,7 @@ struct TodayActions {
         save()
     }
 
-    private func applyTouch(_ record: TodayUndoRecord) {
+    private func applyTouch(_ record: UpcomingUndoRecord) {
         let person = record.person
         record.touch.person = person
         context.insert(record.touch)
@@ -93,7 +93,7 @@ struct TodayActions {
         do {
             try context.save()
         } catch {
-            assertionFailure("Today save failed: \(error)")
+            assertionFailure("Upcoming save failed: \(error)")
         }
     }
 }

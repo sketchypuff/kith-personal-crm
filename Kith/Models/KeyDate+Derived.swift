@@ -16,7 +16,7 @@ extension KeyDate {
         return calendar.date(from: DateComponents(year: year, month: month, day: day))
     }
 
-    /// Whether the given occurrence was already checked off on Today. Handled
+    /// Whether the given occurrence was already checked off on Upcoming. Handled
     /// means `lastHandledAt` falls inside that occurrence's lead window, so the
     /// mark naturally expires when the next year's window opens.
     func isHandled(occurrence: Date, calendar: Calendar = .current) -> Bool {

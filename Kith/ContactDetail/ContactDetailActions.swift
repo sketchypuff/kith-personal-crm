@@ -3,7 +3,7 @@ import SwiftData
 
 /// The contact sheet's mutations: configure cadence, manage dates and tags,
 /// write notes. Nothing here advances the relationship clock — logging,
-/// snoozing, and skipping are Today-only (Contact Detail §8).
+/// snoozing, and skipping are Upcoming-only (Contact Detail §8).
 struct ContactDetailActions {
     let context: ModelContext
     let notifications: NotificationScheduler

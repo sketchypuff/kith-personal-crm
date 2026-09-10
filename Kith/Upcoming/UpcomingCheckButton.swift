@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The universal check CTA. Stateless: the row itself animates out on tap,
 /// and an undone row must come back showing the empty circle.
-struct TodayCheckButton: View {
+struct UpcomingCheckButton: View {
     let label: String
     let action: () -> Void
 

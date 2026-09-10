@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-/// A logged interaction. Created only from Today's check or the widget's intent.
+/// A logged interaction. Created only from Upcoming's check or the widget's intent.
 @Model
 final class Touch {
     var id: UUID = UUID()

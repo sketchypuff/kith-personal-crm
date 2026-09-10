@@ -1,39 +1,42 @@
 import SwiftData
 import SwiftUI
 
-/// The root screen: one prioritized feed where every row resolves to one tap.
-struct TodayView: View {
+/// The root screen: one prioritized 30-day feed where every row resolves to one tap.
+struct UpcomingView: View {
     @Query(sort: \Person.name) private var people: [Person]
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var path = NavigationPath()
-    @State private var segment: TodaySegment = .all
+    @State private var segment: UpcomingSegment = .upcoming
     @State private var now = Date.now
-    @State private var undo: TodayUndoRecord?
+    @State private var undo: UpcomingUndoRecord?
     @State private var checkCount = 0
     @State private var addFlow = AddContactFlowState()
 
-    private var feed: TodayFeed {
-        TodayFeed.build(people: people, now: now)
+    private var feed: UpcomingFeed {
+        UpcomingFeed.build(people: people, now: now)
     }
 
-    private var actions: TodayActions {
-        TodayActions(context: modelContext, notifications: NotificationScheduler())
+    private var actions: UpcomingActions {
+        UpcomingActions(context: modelContext, notifications: NotificationScheduler())
     }
 
     var body: some View {
         let feed = feed
-        let activeSegment = feed.hasOverdue ? segment : .all
+        // With nothing overdue the picker is hidden, and Upcoming is the whole feed.
+        let activeSegment: UpcomingSegment = feed.hasOverdue ? segment : .upcoming
         let items = feed.items(for: activeSegment)
 
         NavigationStack(path: $path) {
             List(items) { item in
-                TodayRow(item: item) {
+                UpcomingRow(item: item) {
                     check(item)
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                    if case .reachOut(let person, _) = item {
+                    // Only rows asking for something today: holding or skipping
+                    // a reach-out that isn't due yet would do nothing.
+                    if case .reachOut(let person, _) = item, item.isActionable {
                         Button("Remind me tomorrow", systemImage: "clock.arrow.circlepath") {
                             remindTomorrow(person)
                         }
@@ -49,7 +52,7 @@ struct TodayView: View {
             .safeAreaInset(edge: .top, spacing: 0) {
                 if feed.hasOverdue {
                     Picker("Show", selection: $segment) {
-                        ForEach(TodaySegment.allCases) { segment in
+                        ForEach(UpcomingSegment.allCases) { segment in
                             Text(segment.rawValue).tag(segment)
                         }
                     }
@@ -62,7 +65,7 @@ struct TodayView: View {
             }
             .overlay {
                 if items.isEmpty {
-                    TodayEmptyView(
+                    UpcomingEmptyView(
                         feed: feed,
                         segment: activeSegment,
                         hasPeople: !people.isEmpty,
@@ -79,7 +82,7 @@ struct TodayView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-            .navigationTitle("Today")
+            .navigationTitle("Upcoming")
             .toolbarTitleDisplayMode(.inline)
             .scrollEdgeEffectStyle(.soft, for: .top)
             .navigationDestination(for: Person.self) { person in
@@ -116,7 +119,7 @@ struct TodayView: View {
         addFlow.begin()
     }
 
-    private func check(_ item: TodayItem) {
+    private func check(_ item: UpcomingItem) {
         withAnimation {
             switch item {
             case .reachOut(let person, _):
@@ -173,13 +176,13 @@ struct TodayView: View {
 }
 
 #Preview("Feed") {
-    TodayView()
+    UpcomingView()
         .modelContainer(SampleData.previewContainer())
         .environment(ContactImageCache())
 }
 
 #Preview("Caught up") {
-    TodayView()
+    UpcomingView()
         .modelContainer(SampleData.previewContainer(caughtUp: true))
         .environment(ContactImageCache())
 }
