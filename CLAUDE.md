@@ -38,6 +38,26 @@ xcrun simctl launch booted com.yashshenai.kith -kith-seed-sample
 
 Do not pass `CODE_SIGNING_ALLOWED=NO`: it strips the App Group entitlement and SwiftData traps at launch. Simulator ad-hoc signing needs no team.
 
+### Releasing to TestFlight
+
+`ExportOptions.plist` at the repo root drives the upload; every key in it is one `xcodebuild -help` documents.
+
+```bash
+# Archive (Release, unsigned-for-simulator destinations won't work — must be generic iOS)
+xcodebuild -project Kith.xcodeproj -scheme Kith -configuration Release \
+  -destination 'generic/platform=iOS' -archivePath build/Kith.xcarchive archive
+
+# Re-sign for distribution and upload straight to App Store Connect
+xcodebuild -exportArchive -archivePath build/Kith.xcarchive \
+  -exportOptionsPlist ExportOptions.plist -exportPath build/export
+```
+
+Uploading authenticates as the Apple ID in Xcode's Accounts settings. Without one, pass an App Store Connect API key: `-authenticationKeyPath`, `-authenticationKeyID`, `-authenticationKeyIssuerID`.
+
+**Deploy the CloudKit schema to Production before the first upload.** A TestFlight build reads the Production container; the simulator and local device builds write the Development one. SwiftData infers the schema on first synced save, so the record types (`CD_Person`, `CD_Touch`, `CD_SkipMarker`, `CD_KeyDate`) only exist after the app has run on a device signed into iCloud with sync on. Promote them in the CloudKit Console with Deploy Schema Changes. Production schema is **additive only** — no renames, no deletions — which is the standing reason new attributes must be optional or defaulted.
+
+`manageAppVersionAndBuildNumber` is off, so `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` ship exactly as set. Build numbers must be unique within a version string: re-uploading the same version needs `CURRENT_PROJECT_VERSION` bumped.
+
 ### Implemented so far
 - Data model (`Kith/Models`), `CadenceEngine` / `KeyDateEngine` (`Kith/Cadence`), container coordinator + App Group preferences (`Kith/Persistence`).
 - **Upcoming** screen end to end (`Kith/Upcoming`; the spec still calls it Home / Today): ranked feed, conditional segments, check + undo, Remind me tomorrow / Skip, caught-up state, contact avatar cache. The feed is a **30-day look-ahead** (`UpcomingFeed.horizonDays`) covering key dates and each person's *next* reach-out, due or not; a repeating cadence contributes exactly one row. A key date's `leadTimeDays` now only drives its notification, not its visibility.

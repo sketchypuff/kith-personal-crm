@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- TestFlight and the App Store are the same pipe. -->
+	<key>method</key>
+	<string>app-store-connect</string>
+
+	<!-- Hand the build straight to App Store Connect instead of leaving an
+	     IPA on disk for Transporter to pick up. -->
+	<key>destination</key>
+	<string>upload</string>
+
+	<key>teamID</key>
+	<string>VJM2YF5USQ</string>
+
+	<!-- The project archives with automatic signing, so re-sign the same way. -->
+	<key>signingStyle</key>
+	<string>automatic</string>
+
+	<!-- A TestFlight build talks to the Production CloudKit container, never
+	     the Development one the simulator writes to. Distribution signing
+	     already defaults to Production; saying so here removes the doubt.
+	     The schema must be deployed to Production in the CloudKit Console
+	     first, or sync fails for testers while working locally. -->
+	<key>iCloudContainerEnvironment</key>
+	<string>Production</string>
+
+	<!-- Xcode otherwise rewrites the build number on upload. The version and
+	     build in the project are deliberate, so leave them alone: bump
+	     CURRENT_PROJECT_VERSION yourself for each re-upload of a version. -->
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+
+	<!-- dSYMs, so TestFlight crash reports come back symbolicated. -->
+	<key>uploadSymbols</key>
+	<true/>
+</dict>
+</plist>
