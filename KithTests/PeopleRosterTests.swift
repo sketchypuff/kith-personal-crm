@@ -56,7 +56,7 @@ struct PeopleRosterTests {
 
         let roster = build()
         #expect(names(roster) == ["Ángela One", "angela Two", "Bob", "Zed"])
-        #expect(roster.visibleCount == 4)
+        #expect(roster.entries.count == 4)
     }
 
     @Test func nonLetterNamesSortToTheEnd() {
@@ -94,7 +94,7 @@ struct PeopleRosterTests {
         person("Alice")
         let roster = build(search: "zzz")
         #expect(roster.isEmpty)
-        #expect(roster.visibleCount == 0)
+        #expect(roster.entries.count == 0)
     }
 
     // MARK: Filter

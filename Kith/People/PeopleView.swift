@@ -37,13 +37,6 @@ struct PeopleView: View {
                     // reads as a stray rule under the search field.
                     .listRowSeparator(entry.id == roster.entries.first?.id ? .hidden : .automatic, edges: .top)
                 }
-                if !roster.isEmpty {
-                    // Contacts-style trailing footer that scrolls with the content.
-                    Section {
-                    } footer: {
-                        PeopleCountFooter(count: roster.visibleCount, filterSummary: filter.summary)
-                    }
-                }
             }
             .listStyle(.plain)
             .rosterSearchable(text: $searchText, enabled: people.count >= Self.searchThreshold)

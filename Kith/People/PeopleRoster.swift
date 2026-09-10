@@ -5,7 +5,6 @@ import Foundation
 /// unit tested.
 struct PeopleRoster {
     let entries: [RosterEntry]
-    var visibleCount: Int { entries.count }
     /// Every tag in use across the whole roster, for the filter picker.
     let allTags: [String]
 
