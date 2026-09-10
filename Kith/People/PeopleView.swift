@@ -29,13 +29,9 @@ struct PeopleView: View {
 
         NavigationStack(path: $path) {
             List {
-                ForEach(roster.sections) { section in
-                    Section(section.letter) {
-                        ForEach(section.entries) { entry in
-                            PeopleRow(entry: entry, now: now) {
-                                delete(entry.person)
-                            }
-                        }
+                ForEach(roster.entries) { entry in
+                    PeopleRow(entry: entry, now: now) {
+                        delete(entry.person)
                     }
                 }
                 if !roster.isEmpty {

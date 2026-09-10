@@ -43,12 +43,12 @@ struct PeopleRosterTests {
     }
 
     private func names(_ roster: PeopleRoster) -> [String] {
-        roster.sections.flatMap(\.entries).map(\.person.name)
+        roster.entries.map(\.person.name)
     }
 
-    // MARK: Sort & sectioning
+    // MARK: Sort
 
-    @Test func sortsLocalizedAndSectionsByFoldedFirstLetter() {
+    @Test func sortsLocalizedIntoOneFlatList() {
         person("angela Two")
         person("Ángela One")
         person("Zed")
@@ -56,18 +56,16 @@ struct PeopleRosterTests {
 
         let roster = build()
         #expect(names(roster) == ["Ángela One", "angela Two", "Bob", "Zed"])
-        #expect(roster.sections.map(\.letter) == ["A", "B", "Z"])
         #expect(roster.visibleCount == 4)
     }
 
-    @Test func nonLetterNamesCollectInTrailingSymbolSection() {
+    @Test func nonLetterNamesSortToTheEnd() {
         person("42 Crew")
         person("Zed")
         person("Alice")
 
         let roster = build()
-        #expect(roster.sections.map(\.letter) == ["A", "Z", PeopleRoster.symbolSection])
-        #expect(roster.sections.last?.entries.first?.person.name == "42 Crew")
+        #expect(names(roster) == ["Alice", "Zed", "42 Crew"])
     }
 
     // MARK: Search
@@ -79,7 +77,7 @@ struct PeopleRosterTests {
         person("Eve")
 
         let roster = build(search: "client")
-        let entries = roster.sections.flatMap(\.entries)
+        let entries = roster.entries
         #expect(entries.map(\.person.name) == ["Bob", "Client Carla", "Dana"])
         #expect(entries[0].matchHint == "matches: #clients")
         #expect(entries[1].matchHint == nil)
@@ -129,12 +127,12 @@ struct PeopleRosterTests {
         #expect(names(roster) == ["Leah"])
     }
 
-    @Test func emptySectionsDisappearWhenFilteredOut() {
+    @Test func filteredOutPeopleLeaveTheList() {
         person("Alice", lastLogged: daysAgo(1))
         person("Bob", lastLogged: daysAgo(20))
 
         let roster = build(filter: RosterFilter(overdueOnly: true))
-        #expect(roster.sections.map(\.letter) == ["B"])
+        #expect(names(roster) == ["Bob"])
     }
 
     @Test func allTagsIsDerivedFromEveryoneAndSorted() {
