@@ -9,13 +9,14 @@ struct UpcomingView: View {
 
     @State private var path = NavigationPath()
     @State private var segment: UpcomingSegment = .upcoming
+    @State private var horizon: UpcomingHorizon = .default
     @State private var now = Date.now
     @State private var undo: UpcomingUndoRecord?
     @State private var checkCount = 0
     @State private var addFlow = AddContactFlowState()
 
     private var feed: UpcomingFeed {
-        UpcomingFeed.build(people: people, now: now)
+        UpcomingFeed.build(people: people, now: now, horizon: horizon)
     }
 
     private var actions: UpcomingActions {
@@ -84,9 +85,9 @@ struct UpcomingView: View {
                 }
             }
             .navigationTitle("Upcoming")
-            // Derived from the constant that actually bounds the feed, so the
-            // two can't drift apart.
-            .navigationSubtitle("Next \(UpcomingFeed.horizonDays) days")
+            // Named by the same value that bounds the feed, so the header can't
+            // claim a window the list isn't showing.
+            .navigationSubtitle(horizon.label)
             .toolbarTitleDisplayMode(.inline)
             .scrollEdgeEffectStyle(.soft, for: .top)
             .navigationDestination(for: Person.self) { person in
@@ -99,6 +100,12 @@ struct UpcomingView: View {
                 // Hidden on first run: the empty state's Add Contact button is
                 // the single call to action until someone has been added.
                 if !people.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        UpcomingFilterMenu(horizon: $horizon)
+                    }
+                    // Splits the two into separate glass capsules: narrowing the
+                    // feed and adding a person are unrelated acts.
+                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Add", systemImage: "plus", action: beginAdd)
                             .buttonStyle(.glassProminent)   // the screen's primary CTA, accent-tinted

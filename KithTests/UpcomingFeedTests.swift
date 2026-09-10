@@ -85,7 +85,7 @@ struct UpcomingFeedTests {
             return
         }
         #expect(feed.reachOuts.count == 1)
-        #expect(days > 0 && days <= UpcomingFeed.horizonDays)
+        #expect(days > 0 && days <= UpcomingHorizon.default.days)
     }
 
     @Test func onlyTheNextOccurrenceOfARepeatingCadenceShows() {
@@ -196,5 +196,56 @@ struct UpcomingFeedTests {
         #expect(today.subtitle == "Birthday · today")
         let soon = UpcomingItem.keyDate(keyDate: birthday, person: overdue, occurrence: now, daysUntil: 3)
         #expect(soon.subtitle == "Birthday · in 3d")
+    }
+
+    // MARK: - Horizon filter
+
+    /// The horizon bounds what is still ahead. An overdue reach-out sits before
+    /// now, so no forward window contains it and narrowing must not hide it.
+    @Test func narrowingTheHorizonDropsDistantRowsButKeepsOverdue() {
+        let near = person("Near", cadence: .never, lastLogged: nil)
+        keyDate(.birthday, for: near, daysAhead: 3)
+        let far = person("Far", cadence: .never, lastLogged: nil)
+        keyDate(.birthday, for: far, daysAhead: 20)
+        person("Late", cadence: .weekly, lastLogged: daysAgo(20))
+
+        let month = UpcomingFeed.build(people: people, now: now, calendar: calendar, horizon: .month)
+        #expect(month.dates.map(\.person.name) == ["Near", "Far"])
+        #expect(month.reachOuts.map(\.person.name) == ["Late"])
+
+        let week = UpcomingFeed.build(people: people, now: now, calendar: calendar, horizon: .week)
+        #expect(week.dates.map(\.person.name) == ["Near"])
+        #expect(week.reachOuts.map(\.person.name) == ["Late"])
+        #expect(week.hasOverdue)
+    }
+
+    /// Today answers "what needs me now": today's rows, plus anything late.
+    @Test func todayKeepsOnlyTodaysRowsAndOverdue() {
+        let today = person("Today", cadence: .never, lastLogged: nil)
+        keyDate(.birthday, for: today, daysAhead: 0)
+        let tomorrow = person("Tomorrow", cadence: .never, lastLogged: nil)
+        keyDate(.birthday, for: tomorrow, daysAhead: 1)
+        person("Late", cadence: .weekly, lastLogged: daysAgo(20))
+        person("Soon", cadence: .daily, lastLogged: daysAgo(0))   // due tomorrow
+
+        let feed = UpcomingFeed.build(people: people, now: now, calendar: calendar, horizon: .today)
+        #expect(feed.dates.map(\.person.name) == ["Today"])
+        #expect(feed.reachOuts.map(\.person.name) == ["Late"])
+    }
+
+    /// The empty state and the navigation subtitle both read the horizon back
+    /// off the feed, so it has to survive the build.
+    @Test func theFeedCarriesTheHorizonItWasBuiltFor() {
+        person("A", lastLogged: daysAgo(1))
+
+        #expect(UpcomingFeed.build(people: people, now: now, calendar: calendar).horizon == .month)
+        let today = UpcomingFeed.build(people: people, now: now, calendar: calendar, horizon: .today)
+        #expect(today.horizon == .today)
+    }
+
+    @Test func horizonNamesMatchTheMenu() {
+        #expect(UpcomingHorizon.allCases.map(\.label) == ["Today", "Next 7 days", "Next 30 days"])
+        #expect(UpcomingHorizon.default == .month)
+        #expect(UpcomingHorizon.week.days == 7)
     }
 }

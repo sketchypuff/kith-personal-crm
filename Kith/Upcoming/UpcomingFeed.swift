@@ -3,10 +3,10 @@ import Foundation
 /// The ranked Upcoming feed, built in memory from the `@Query` result.
 /// Pure and clock-injected so it can be unit tested.
 struct UpcomingFeed {
-    /// How far ahead the feed looks, for both key dates and reach-outs.
-    /// A key date's own `leadTimeDays` still governs when its *notification*
-    /// fires; it no longer decides when the row becomes visible.
-    static let horizonDays = 30
+    /// How far ahead this feed looked. A key date's own `leadTimeDays` still
+    /// governs when its *notification* fires; it does not decide when the row
+    /// becomes visible.
+    let horizon: UpcomingHorizon
 
     /// Key dates inside the horizon, soonest first (today at the top).
     let dates: [UpcomingItem]
@@ -31,7 +31,12 @@ struct UpcomingFeed {
         }
     }
 
-    static func build(people: [Person], now: Date = .now, calendar: Calendar = .current) -> UpcomingFeed {
+    static func build(
+        people: [Person],
+        now: Date = .now,
+        calendar: Calendar = .current,
+        horizon: UpcomingHorizon = .default
+    ) -> UpcomingFeed {
         var dates: [UpcomingItem] = []
         var personIDsWithDateToday: Set<UUID> = []
 
@@ -39,7 +44,7 @@ struct UpcomingFeed {
             for keyDate in person.keyDates ?? [] {
                 guard let occurrence = keyDate.nextOccurrence(from: now, calendar: calendar) else { continue }
                 let days = KeyDateEngine.daysUntil(occurrence, from: now, calendar: calendar)
-                guard days <= horizonDays else { continue }
+                guard days <= horizon.days else { continue }
                 guard !keyDate.isHandled(occurrence: occurrence, calendar: calendar) else { continue }
                 dates.append(.keyDate(keyDate: keyDate, person: person, occurrence: occurrence, daysUntil: days))
                 if days == 0 { personIDsWithDateToday.insert(person.id) }
@@ -69,10 +74,12 @@ struct UpcomingFeed {
 
             let status: UpcomingItem.ReachOutStatus
             if overdue {
+                // Already late, so no forward window contains it. Overdue is
+                // the app's whole point; narrowing the horizon must never hide it.
                 status = .overdue(days: CadenceEngine.daysOverdue(due: due, now: now, calendar: calendar))
             } else {
                 let days = KeyDateEngine.daysUntil(due, from: now, calendar: calendar)
-                guard days <= horizonDays else { continue }
+                guard days <= horizon.days else { continue }
                 status = days == 0 ? .due : .upcoming(days: days)
             }
 
@@ -89,7 +96,9 @@ struct UpcomingFeed {
             return lhs.item.person.name.localizedStandardCompare(rhs.item.person.name) == .orderedAscending
         }
 
+        // Coverage answers "how am I doing overall", so it counts everyone with
+        // a cadence regardless of the horizon the feed was built for.
         let coverage: Double? = eligible == 0 ? nil : Double(onTrack) / Double(eligible)
-        return UpcomingFeed(dates: dates, reachOuts: pending.map(\.item), coverage: coverage)
+        return UpcomingFeed(horizon: horizon, dates: dates, reachOuts: pending.map(\.item), coverage: coverage)
     }
 }

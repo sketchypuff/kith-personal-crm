@@ -23,7 +23,9 @@ struct UpcomingEmptyView: View {
             }
         } else if feed.isEmpty {
             ContentUnavailableView {
-                Label("Nothing in the next 30 days.", systemImage: "checkmark.circle")
+                // Says the window the feed was actually built for, so a
+                // narrowed filter can't read as "nothing at all".
+                Label("Nothing \(feed.horizon.span).", systemImage: "checkmark.circle")
             } description: {
                 if let coverage = feed.coverage {
                     Text("\(coverage, format: .percent.precision(.fractionLength(0))) on track")
@@ -35,7 +37,7 @@ struct UpcomingEmptyView: View {
                 ContentUnavailableView(
                     "Nothing coming up",
                     systemImage: "calendar",
-                    description: Text("Dates and reach-outs appear here 30 days ahead.")
+                    description: Text("No dates or reach-outs \(feed.horizon.span).")
                 )
             case .overdue:
                 ContentUnavailableView(
