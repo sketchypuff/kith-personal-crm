@@ -15,6 +15,11 @@ struct SettingsView: View {
     @State private var lockAvailability = LockAuthenticator().availability()
     @State private var iCloudAvailable = ModelContainerCoordinator.isICloudAvailable
 
+    /// The developer card. Presented from the `Form` rather than from inside
+    /// `AboutSection`, because a `.sheet` on a `Section` is applied once per
+    /// row and the competing presentations dismiss one another instantly.
+    @State private var isPresentingDeveloper = false
+
     /// The coalesced reschedule pass (§9): every notification-preference
     /// change restarts the timer, so a burst of flips settles into one pass.
     /// Unstructured on purpose — it must survive switching tabs mid-settle.
@@ -38,10 +43,13 @@ struct SettingsView: View {
                     Text("Set a device passcode in iOS Settings to use the lock.")
                 }
             }
-            AboutSection()
+            AboutSection(onShowDeveloper: showDeveloper)
         }
         .navigationTitle("Settings")
         .toolbarTitleDisplayMode(.inline)
+        .sheet(isPresented: $isPresentingDeveloper) {
+            DeveloperCardView()
+        }
         .task {
             await refreshNotificationPermission()
         }
@@ -51,6 +59,10 @@ struct SettingsView: View {
     }
 
     // MARK: - Actions
+
+    private func showDeveloper() {
+        isPresentingDeveloper = true
+    }
 
     private func notificationsDidChange() {
         let actions = actions
