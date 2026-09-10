@@ -9,7 +9,7 @@ import SwiftData
 @Observable
 final class ModelContainerCoordinator {
     static let schema = Schema([Person.self, Touch.self, SkipMarker.self, KeyDate.self])
-    static let cloudKitContainerID = "iCloud.com.yash.kith"
+    static let cloudKitContainerID = "iCloud.com.yashshenai.kith"
 
     private(set) var container: ModelContainer
 
@@ -19,7 +19,7 @@ final class ModelContainerCoordinator {
     private(set) var syncEnabled: Bool
 
     private let storeURL: URL?
-    private let logger = Logger(subsystem: "com.yash.kith", category: "persistence")
+    private let logger = Logger(subsystem: "com.yashshenai.kith", category: "persistence")
 
     /// - Parameter storeURL: the on-disk store. Defaults to the App Group store
     ///   shared with the widget; tests pass a temporary file.
@@ -32,7 +32,7 @@ final class ModelContainerCoordinator {
                 self.syncEnabled = true
                 return
             }
-            Logger(subsystem: "com.yash.kith", category: "persistence")
+            Logger(subsystem: "com.yashshenai.kith", category: "persistence")
                 .error("CloudKit container failed to initialize; falling back to local store.")
         }
 

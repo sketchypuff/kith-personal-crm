@@ -25,7 +25,7 @@ xcodebuild test -project Kith.xcodeproj -scheme Kith -destination 'platform=iOS 
 
 # Install + launch on a booted simulator with sample people (DEBUG only; seeds only an empty store)
 xcrun simctl install booted <DerivedData>/Build/Products/Debug-iphonesimulator/Kith.app
-xcrun simctl launch booted com.yash.kith -kith-seed-sample
+xcrun simctl launch booted com.yashshenai.kith -kith-seed-sample
 ```
 
 Do not pass `CODE_SIGNING_ALLOWED=NO`: it strips the App Group entitlement and SwiftData traps at launch. Simulator ad-hoc signing needs no team.
@@ -72,11 +72,11 @@ SwiftData + CloudKit private DB forbids things plain SwiftData allows. Every mod
 - `nextDue` / `isOverdue` are **computed, never persisted**. All interval math lives in one `CadenceEngine` so every surface derives identically.
 
 ### Two stores, deliberately split
-- **SwiftData store** (App Group `group.com.yash.kith`) — people and their children. Synced when sync is on. Read by the widget.
+- **SwiftData store** (App Group `group.com.yashshenai.kith`) — people and their children. Synced when sync is on. Read by the widget.
 - **`UserDefaults` in the same App Group** via `@AppStorage` — all Settings values (default reminder time, the single notifications switch, new-contact cadence defaults, lock, sync flag). **Device-local, never synced.** The sync toggle can't live in the store it toggles.
 
 ### Sync toggle rebuilds the container
-Sync on/off is a different `ModelConfiguration(cloudKitDatabase: .private("iCloud.com.yash.kith") vs .none)`, not a runtime flag. An app-level `@Observable` coordinator owns the container and republishes it into the environment. Turning sync off leaves the iCloud copy intact.
+Sync on/off is a different `ModelConfiguration(cloudKitDatabase: .private("iCloud.com.yashshenai.kith") vs .none)`, not a runtime flag. An app-level `@Observable` coordinator owns the container and republishes it into the environment. Turning sync off leaves the iCloud copy intact.
 
 ### Where actions live (hard boundaries between screens)
 - **Today is the only place a touch is logged.** Logged / Remind me tomorrow / Skip are Today-only (check button + swipe actions). The widget's App Intent may also log.

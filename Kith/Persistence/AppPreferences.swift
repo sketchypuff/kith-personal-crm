@@ -8,7 +8,7 @@ import Foundation
 /// tests can run against a throwaway suite. Both share one "missing key means
 /// default" rule per key.
 enum AppPreferences {
-    static let suiteName = "group.com.yash.kith"
+    static let suiteName = "group.com.yashshenai.kith"
 
     /// Falls back to `.standard` if the App Group is unavailable (e.g. a
     /// preview host without the entitlement) so `@AppStorage` never gets nil.
