@@ -59,8 +59,6 @@ struct UpcomingView: View {
                     .pickerStyle(.segmented)
                     .padding(.horizontal)
                     .padding(.bottom, 8)
-                    // Don't let the background extend up under the nav bar and cover the large title.
-                    .background(.bar, ignoresSafeAreaEdges: [])
                 }
             }
             .overlay {
