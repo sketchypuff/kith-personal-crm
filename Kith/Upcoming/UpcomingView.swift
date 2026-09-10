@@ -33,6 +33,9 @@ struct UpcomingView: View {
                 UpcomingRow(item: item) {
                     check(item)
                 }
+                // A plain List draws a separator above its first row, which
+                // reads as a stray rule under the picker.
+                .listRowSeparator(item.id == items.first?.id ? .hidden : .automatic, edges: .top)
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                     // Only rows asking for something today: holding or skipping
                     // a reach-out that isn't due yet would do nothing.
