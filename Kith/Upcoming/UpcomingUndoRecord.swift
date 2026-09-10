@@ -10,10 +10,10 @@ struct UpcomingUndoRecord: Identifiable {
     let keyDate: KeyDate?
     let previousLastHandledAt: Date?
 
+    /// One phrase for both kinds of row: "handled" described the bookkeeping
+    /// rather than what the tap meant, and a key date and a reach-out are the
+    /// same act to the person doing it.
     var message: String {
-        if let keyDate {
-            return "\(keyDate.label) handled · \(person.name)"
-        }
-        return "Logged · \(person.name)"
+        "Checked in · \(person.name)"
     }
 }

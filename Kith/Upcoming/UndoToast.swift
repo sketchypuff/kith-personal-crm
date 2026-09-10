@@ -22,6 +22,6 @@ struct UndoToast: View {
 }
 
 #Preview {
-    UndoToast(message: "Logged · Maya Patel") {}
+    UndoToast(message: "Checked in · Maya Patel") {}
         .padding()
 }
