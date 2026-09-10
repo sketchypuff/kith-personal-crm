@@ -6,6 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Kith** — a fully on-device personal CRM for iPhone. iOS 26+, pure SwiftUI, SwiftData mirrored to a private CloudKit database, WidgetKit small widget, local notifications. Single user, no backend, no accounts, no analytics.
 
+## Git: never commit or push unasked
+
+**Do not run `git commit` or `git push` unless the current message explicitly asks for it.** Finishing a change means leaving it built, tested, and uncommitted, then saying what changed. Stop there.
+
+- Permission does not carry forward. "Commit and push" applies to that request only — the next task starts from no again, however similar it looks.
+- **Do not create branches unless asked.** Work lands on the branch already checked out, normally `main`. Read it with `git branch --show-current` rather than trusting a session-start snapshot, which goes stale; if it isn't the branch the work belongs on, say so instead of quietly going along with it.
+- Committing without being asked is worse than waiting: it writes history the user has not reviewed, and pushing puts it somewhere they have to undo rather than simply approve.
+
 ## Repository state
 
 `Kith.xcodeproj` is a hand-written Xcode 26 project using **synchronized folder groups** (`Kith/` and `KithTests/`): any file added under those folders is picked up automatically, so there is no per-file bookkeeping in `project.pbxproj`. Product specs live under `prds/`, which is **gitignored** — the specs exist on this machine but are not tracked, so do not assume another checkout has them.
