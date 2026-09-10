@@ -11,9 +11,16 @@ struct KithApp: App {
     @AppStorage(AppPreferences.Key.appTheme, store: AppPreferences.store)
     private var theme: AppTheme = .system
 
+    /// Seed the appearance proxies before the first bar is built; the root
+    /// modifier keeps them current from then on.
+    init() {
+        RoundedChrome.apply()
+    }
+
     var body: some Scene {
         WindowGroup {
             AppLockGate()   // wraps RootTabView; nothing renders behind the privacy lock
+                .roundedTypeface()   // SF Rounded everywhere, SwiftUI text and UIKit chrome alike
                 .environment(coordinator)
                 .environment(contactImages)
                 .modelContainer(coordinator.container)

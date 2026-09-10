@@ -107,6 +107,7 @@ Render the monogram immediately; fetch `thumbnailImageData` off the main thread 
 - The one UIKit wrap is `CNContactPickerViewController` via `UIViewControllerRepresentable`, single-select. Don't wrap `UITableView` for the roster.
 - Overdue is shown in an informative tint (secondary orange), never red badges or shaming copy.
 - Empty states use `ContentUnavailableView`.
+- The typeface is **SF Rounded**, chosen once by `.roundedTypeface()` on the root view in `KithApp`. SwiftUI text inherits it from `.fontDesign(.rounded)`; navigation titles, tab bar labels, and segmented controls are UIKit-drawn and need the appearance proxies in `RoundedChrome`, which override the design only and keep Apple's sizes and weights. `UIDatePicker` exposes no font hook, so pickers stay SF Pro. Never set a font family per view.
 - Privacy lock: `LAContext` with `.deviceOwnerAuthentication`; privacy overlay driven by `scenePhase` whenever the lock is on.
 
 ## Sync validation checklist
