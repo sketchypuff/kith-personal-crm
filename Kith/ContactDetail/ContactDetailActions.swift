@@ -73,22 +73,24 @@ struct ContactDetailActions {
 
     // MARK: - Tags
 
-    /// Adds a trimmed tag once (case-insensitive match). Returns false when
-    /// nothing was added. Tags are labels only and never touch cadence.
+    /// Adds a tag once (case-insensitive match), spelled the way the starter
+    /// set spells it. Returns false when nothing was added. Tags are labels
+    /// only and never touch cadence.
     @discardableResult
     func addTag(_ raw: String, to person: Person) -> Bool {
-        let tag = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let tag = TagVocabulary.canonical(raw)
         guard !tag.isEmpty else { return false }
-        guard !person.tags.contains(where: { $0.localizedCaseInsensitiveCompare(tag) == .orderedSame }) else {
-            return false
-        }
+        guard !TagVocabulary.matches(tag, in: person) else { return false }
         person.tags.append(tag)
         save()
         return true
     }
 
     func removeTag(_ tag: String, from person: Person) {
-        person.tags.removeAll { $0 == tag }
+        // Matched the way it was added, so a tag whose spelling was settled by
+        // the starter set can still be removed by the row that shows it.
+        let key = TagVocabulary.fold(tag)
+        person.tags.removeAll { TagVocabulary.fold($0) == key }
         save()
     }
 

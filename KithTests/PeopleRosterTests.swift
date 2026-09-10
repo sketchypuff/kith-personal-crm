@@ -38,8 +38,8 @@ struct PeopleRosterTests {
         (try? container.mainContext.fetch(FetchDescriptor<Person>())) ?? []
     }
 
-    private func build(search: String = "", filter: RosterFilter = RosterFilter()) -> PeopleRoster {
-        PeopleRoster.build(people: people, searchText: search, filter: filter, now: now, calendar: calendar)
+    private func build(search: String = "", tag: String? = nil) -> PeopleRoster {
+        PeopleRoster.build(people: people, searchText: search, tag: tag, now: now, calendar: calendar)
     }
 
     private func names(_ roster: PeopleRoster) -> [String] {
@@ -97,42 +97,39 @@ struct PeopleRosterTests {
         #expect(roster.entries.count == 0)
     }
 
-    // MARK: Filter
+    // MARK: Tag filter
 
-    @Test func overdueFilterExcludesNeverSnoozedAndOnTrack() {
-        person("Overdue", lastLogged: daysAgo(20))
-        person("On track", lastLogged: daysAgo(1))
-        person("Never", cadence: .never)
-        let snoozed = person("Snoozed", lastLogged: daysAgo(20))
-        snoozed.remindOn = calendar.date(byAdding: .day, value: 1, to: now)
+    @Test func tagFilterKeepsOnlyPeopleCarryingIt() {
+        person("Carla", tags: ["clients"])
+        person("Arjun", tags: ["clients", "work"])
+        person("Bob", tags: ["friends"])
+        person("Dana")
 
-        let roster = build(filter: RosterFilter(overdueOnly: true))
-        #expect(names(roster) == ["Overdue"])
+        #expect(names(build(tag: "clients")) == ["Arjun", "Carla"])
+        #expect(names(build()) == ["Arjun", "Bob", "Carla", "Dana"])
     }
 
-    @Test func tagFilterAndOverdueCombineWithAnd() {
-        person("Overdue client", lastLogged: daysAgo(20), tags: ["clients"])
-        person("On-track client", lastLogged: daysAgo(1), tags: ["clients"])
-        person("Overdue friend", lastLogged: daysAgo(20), tags: ["friends"])
+    @Test func tagFilterIgnoresCase() {
+        person("Carla", tags: ["Clients"])
+        person("Bob", tags: ["clients"])
 
-        #expect(names(build(filter: RosterFilter(tag: "clients"))) == ["On-track client", "Overdue client"])
-        #expect(names(build(filter: RosterFilter(overdueOnly: true, tag: "clients"))) == ["Overdue client"])
+        #expect(names(build(tag: "clients")) == ["Bob", "Carla"])
+        #expect(names(build(tag: "CLIENTS")) == ["Bob", "Carla"])
     }
 
-    @Test func filterComposesWithSearch() {
-        person("Arjun", lastLogged: daysAgo(20), tags: ["work"])
-        person("Leah", lastLogged: daysAgo(20), tags: ["work"])
+    @Test func tagFilterComposesWithSearch() {
+        person("Arjun", tags: ["work"])
+        person("Leah", tags: ["work"])
+        person("Leo", tags: ["friends"])
 
-        let roster = build(search: "le", filter: RosterFilter(overdueOnly: true))
-        #expect(names(roster) == ["Leah"])
+        #expect(names(build(search: "le", tag: "work")) == ["Leah"])
     }
 
     @Test func filteredOutPeopleLeaveTheList() {
-        person("Alice", lastLogged: daysAgo(1))
-        person("Bob", lastLogged: daysAgo(20))
+        person("Alice", tags: ["work"])
+        person("Bob")
 
-        let roster = build(filter: RosterFilter(overdueOnly: true))
-        #expect(names(roster) == ["Bob"])
+        #expect(names(build(tag: "work")) == ["Alice"])
     }
 
     @Test func allTagsIsDerivedFromEveryoneAndSorted() {
@@ -141,25 +138,14 @@ struct PeopleRosterTests {
         person("C")
 
         let roster = build(search: "zzz")   // search hides everyone; tags still come from the whole roster
-        #expect(roster.allTags == ["clients", "family", "work"])
+        #expect(roster.allTags == ["clients", "Family", "Work"])
     }
 
-    // MARK: Filter summary
+    @Test func allTagsFoldsCaseIntoOnePill() {
+        // One person, so the order the spellings are seen in is deterministic.
+        // A custom tag keeps the first spelling seen; a starter takes its own.
+        person("A", tags: ["Mentors", "mentors", "work"])
 
-    @Test func filterSummaryAndEmptyTitleFollowTheSpec() {
-        var filter = RosterFilter()
-        #expect(!filter.isActive)
-        #expect(filter.summary == nil)
-
-        filter.overdueOnly = true
-        #expect(filter.summary == "Overdue")
-        #expect(filter.emptyTitle == "No one overdue")
-
-        filter.tag = "clients"
-        #expect(filter.summary == "Overdue · tag: clients")
-        #expect(filter.emptyTitle == "No one overdue tagged “clients”")
-
-        filter.clear()
-        #expect(!filter.isActive)
+        #expect(build().allTags == ["Mentors", "Work"])
     }
 }

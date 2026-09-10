@@ -5,7 +5,7 @@ import Foundation
 /// unit tested.
 struct PeopleRoster {
     let entries: [RosterEntry]
-    /// Every tag in use across the whole roster, for the filter picker.
+    /// Every tag in use across the whole roster, for the pill row.
     let allTags: [String]
 
     var isEmpty: Bool { entries.isEmpty }
@@ -13,7 +13,7 @@ struct PeopleRoster {
     static func build(
         people: [Person],
         searchText: String = "",
-        filter: RosterFilter = RosterFilter(),
+        tag: String? = nil,
         now: Date = .now,
         calendar: Calendar = .current
     ) -> PeopleRoster {
@@ -31,25 +31,23 @@ struct PeopleRoster {
 
         var entries: [RosterEntry] = []
         for person in sorted {
-            guard matchesFilter(person, filter: filter, now: now) else { continue }
+            guard matchesTag(person, tag: tag) else { continue }
             guard let match = searchMatch(for: person, query: query) else { continue }
             let status = person.catchupStatus(at: now, calendar: calendar)
             entries.append(RosterEntry(person: person, status: status, matchHint: match.hint))
         }
 
-        let tags = Set(people.flatMap(\.tags))
-            .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
-
-        return PeopleRoster(entries: entries, allTags: tags)
+        // Derived from everyone, not from `entries`: a search that hides the
+        // whole roster must still leave the pill row standing.
+        return PeopleRoster(entries: entries, allTags: TagVocabulary.all(in: people))
     }
 
     // MARK: - Set logic
 
-    /// Tag ∧ overdue (People Appendix).
-    static func matchesFilter(_ person: Person, filter: RosterFilter, now: Date) -> Bool {
-        if let tag = filter.tag, !person.tags.contains(tag) { return false }
-        if filter.overdueOnly, !person.isOverdue(at: now) { return false }
-        return true
+    /// The pill row's single-select filter. Nil means every tag.
+    static func matchesTag(_ person: Person, tag: String?) -> Bool {
+        guard let tag else { return true }
+        return TagVocabulary.matches(tag, in: person)
     }
 
     /// Name ∪ notes ∪ tags, case- and diacritic-insensitive. Nil means no match.

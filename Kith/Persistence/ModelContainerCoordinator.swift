@@ -8,7 +8,7 @@ import SwiftData
 /// `.none`), so toggling it rebuilds the container rather than flipping a flag.
 @Observable
 final class ModelContainerCoordinator {
-    static let schema = Schema([Person.self, Touch.self, SkipMarker.self, KeyDate.self])
+    static let schema = Schema([Person.self, Touch.self, SkipMarker.self, KeyDate.self, Tag.self])
     static let cloudKitContainerID = "iCloud.com.yashshenai.kith"
 
     private(set) var container: ModelContainer

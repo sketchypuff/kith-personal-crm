@@ -23,9 +23,9 @@ struct UpcomingFeed {
     /// a missed date is unrecoverable while a late reach-out is elastic.
     var allItems: [UpcomingItem] { dates + reachOuts }
 
-    /// The two segments partition `allItems`: every row is in exactly one.
-    func items(for segment: UpcomingSegment) -> [UpcomingItem] {
-        switch segment {
+    /// The two modes partition `allItems`: every row is in exactly one.
+    func items(for mode: UpcomingMode) -> [UpcomingItem] {
+        switch mode {
         case .upcoming: dates + reachOuts.filter { !$0.isOverdue }
         case .overdue: reachOuts.filter(\.isOverdue)
         }
@@ -35,8 +35,15 @@ struct UpcomingFeed {
         people: [Person],
         now: Date = .now,
         calendar: Calendar = .current,
-        horizon: UpcomingHorizon = .default
+        horizon: UpcomingHorizon = .default,
+        tag: String? = nil
     ) -> UpcomingFeed {
+        // Scoping the people up front narrows dates, reach-outs, and coverage
+        // together: the tag picks a group, not a kind of row.
+        let people = tag.map { tag in
+            people.filter { TagVocabulary.matches(tag, in: $0) }
+        } ?? people
+
         var dates: [UpcomingItem] = []
         var personIDsWithDateToday: Set<UUID> = []
 

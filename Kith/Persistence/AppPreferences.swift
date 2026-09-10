@@ -23,10 +23,12 @@ enum AppPreferences {
         static let lockEnabled = "lockEnabled"                       // privacy lock (Settings §6.1)
         static let lockGracePeriod = "lockGracePeriod"               // LockGracePeriod raw value (Settings §6.2)
         static let appTheme = "appTheme"                             // AppTheme raw value; default system
+        static let tagsSeeded = "tagsSeeded"                         // the starter tags were written once
     }
 
     // MARK: - App Group suite
 
+    static var tagsSeeded: Bool { tagsSeeded(in: store) }
     static var notificationsEnabled: Bool { notificationsEnabled(in: store) }
     static var syncEnabled: Bool { syncEnabled(in: store) }
     static var defaultReminderTime: Date { defaultReminderTime(in: store) }
@@ -37,6 +39,18 @@ enum AppPreferences {
     static var appTheme: AppTheme { appTheme(in: store) }
 
     // MARK: - Explicit suite
+
+    /// Whether the starter tags have been written on this device. Device-local
+    /// on purpose: it guards a one-time write, and syncing it would let a
+    /// second device skip seeding while it still has nothing to show. Without
+    /// it, deleting all four starters would just bring them back next launch.
+    static func tagsSeeded(in store: UserDefaults) -> Bool {
+        store.bool(forKey: Key.tagsSeeded)
+    }
+
+    static func setTagsSeeded(_ seeded: Bool, in store: UserDefaults = store) {
+        store.set(seeded, forKey: Key.tagsSeeded)
+    }
 
     /// The notifications switch defaults to on. `bool(forKey:)` reads a missing
     /// key as false, so an absent value has to be treated as true explicitly.

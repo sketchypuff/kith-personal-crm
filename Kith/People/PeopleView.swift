@@ -11,7 +11,7 @@ struct PeopleView: View {
 
     @State private var path = NavigationPath()
     @State private var searchText = ""
-    @State private var filter = RosterFilter()
+    @State private var tag: String?
     @State private var now = Date.now
     @State private var addFlow = AddContactFlowState()
     @State private var contactsStatus = CNContactStore.authorizationStatus(for: .contacts)
@@ -25,7 +25,7 @@ struct PeopleView: View {
     }
 
     var body: some View {
-        let roster = PeopleRoster.build(people: people, searchText: searchText, filter: filter, now: now)
+        let roster = PeopleRoster.build(people: people, searchText: searchText, tag: tag, now: now)
 
         NavigationStack(path: $path) {
             List {
@@ -48,19 +48,17 @@ struct PeopleView: View {
                 if hidden { searchText = "" }
             }
             .safeAreaInset(edge: .top, spacing: 0) {
-                if let summary = filter.summary {
-                    PeopleFilterStatusBar(summary: summary, onClear: clearFilters)
-                }
+                TagPillRow(tags: roster.allTags, selection: $tag)
             }
             .overlay {
                 if roster.isEmpty {
                     PeopleEmptyView(
                         hasPeople: !people.isEmpty,
                         searchText: searchText,
-                        filter: filter,
+                        tag: tag,
                         contactsStatus: contactsStatus,
                         onAdd: beginAdd,
-                        onClearFilters: clearFilters
+                        onClearTag: clearTag
                     )
                 }
             }
@@ -73,15 +71,9 @@ struct PeopleView: View {
                 ContactDetailView(person: route.person, showsAlreadyInKithNote: true)
             }
             .toolbar {
-                // Both are hidden on first run: there is nothing to filter, and
-                // the empty state's Add Contact button is the single call to action.
+                // Hidden on first run: the empty state's Add Contact button is
+                // the single call to action until someone has been added.
                 if !people.isEmpty {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        PeopleFilterMenu(filter: $filter, tags: roster.allTags)
-                    }
-                    // Same pairing as Upcoming: the spacer splits the two into
-                    // separate glass capsules, and Add is the prominent one.
-                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Add", systemImage: "plus", action: beginAdd)
                             .buttonStyle(.glassProminent)   // the screen's primary CTA, accent-tinted
@@ -90,7 +82,12 @@ struct PeopleView: View {
             }
             .addContactFlow($addFlow, onDuplicate: showExisting)
         }
-        .animation(.default, value: filter)
+        .animation(.default, value: tag)
+        // Untagging the last person carrying the lit tag would otherwise leave
+        // the roster scoped to a pill that no longer exists.
+        .onChange(of: roster.allTags) { _, tags in
+            if let tag, !tags.contains(tag) { clearTag() }
+        }
         .onChange(of: scenePhase) { _, phase in
             handleScenePhase(phase)
         }
@@ -102,8 +99,10 @@ struct PeopleView: View {
         addFlow.begin()
     }
 
-    private func clearFilters() {
-        filter.clear()
+    private func clearTag() {
+        withAnimation {
+            tag = nil
+        }
     }
 
     private func delete(_ person: Person) {

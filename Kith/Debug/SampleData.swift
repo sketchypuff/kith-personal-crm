@@ -33,12 +33,12 @@ enum SampleData {
         let maya = Person(name: "Maya Patel", linkedContactID: "")
         maya.cadence = .weekly
         maya.lastLoggedAt = daysAgo(12)
-        maya.tags = ["close friends"]
+        maya.tags = ["Close friends"]
 
         let arjun = Person(name: "Arjun Mehta", linkedContactID: "")
         arjun.cadence = .monthly
         arjun.lastLoggedAt = daysAgo(50)
-        arjun.tags = ["work"]
+        arjun.tags = ["Work"]
 
         let sam = Person(name: "Sam Rivera", linkedContactID: "")
         sam.cadence = .weekly
@@ -47,7 +47,7 @@ enum SampleData {
         let priya = Person(name: "Priya Shah", linkedContactID: "")
         priya.cadence = .weekly
         priya.lastLoggedAt = daysAgo(1)
-        priya.tags = ["family"]
+        priya.tags = ["Family"]
         let priyaBirthday = keyDate(.birthday, on: now, calendar: calendar)
 
         let dev = Person(name: "Dev Kapoor", linkedContactID: "")

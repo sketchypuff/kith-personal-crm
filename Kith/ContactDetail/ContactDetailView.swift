@@ -10,6 +10,10 @@ struct ContactDetailView: View {
     @Bindable var person: Person
     var showsAlreadyInKithNote = false
 
+    /// Only for the tag menu's options: Contact Detail picks from the
+    /// vocabulary rather than growing it. Managed in Settings, not here.
+    @Query private var tags: [Tag]
+
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
 
@@ -60,7 +64,12 @@ struct ContactDetailView: View {
                     onDelete: deleteKeyDate
                 )
 
-                TagsSection(tags: person.tags, onAdd: addTag, onRemove: removeTag)
+                TagsSection(
+                    tags: person.tags,
+                    available: TagVocabulary.options(from: tags, notIn: person.tags),
+                    onAdd: addTag,
+                    onRemove: removeTag
+                )
 
                 NotesSection(person: person, onCommit: commitNotes)
 
@@ -123,7 +132,7 @@ struct ContactDetailView: View {
         }
     }
 
-    private func addTag(_ tag: String) -> Bool {
+    private func addTag(_ tag: String) {
         withAnimation {
             actions.addTag(tag, to: person)
         }

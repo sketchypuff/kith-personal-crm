@@ -1,19 +1,18 @@
 import SwiftUI
 
-/// Free-form labels, one per row, with inline add and swipe-to-remove.
+/// The tags applied to one person, one per row, added from a fixed list.
+/// Shared by Contact Detail and the Add Contact setup sheet.
+///
+/// Pick-only, everywhere: no free text. The list is the starter tags plus
+/// whatever is already in use on the roster, so tagging stays a choice from a
+/// short menu rather than a spelling exercise.
 /// Labels only — tags never affect cadence (PRD P0-3).
 struct TagsSection: View {
     let tags: [String]
-    /// Returns true when the tag was added, so the field can clear.
-    let onAdd: (String) -> Bool
+    /// Every tag that can be picked, this person's own already removed.
+    let available: [String]
+    let onAdd: (String) -> Void
     let onRemove: (String) -> Void
-
-    @State private var newTag = ""
-    @FocusState private var isEntryFocused: Bool
-
-    private var canAdd: Bool {
-        !newTag.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
 
     var body: some View {
         Section {
@@ -35,27 +34,21 @@ struct TagsSection: View {
                 }
             }
 
-            HStack {
-                TextField("Add tag", text: $newTag)
-                    .textInputAutocapitalization(.never)
-                    .submitLabel(.done)
-                    .focused($isEntryFocused)
-                    .onSubmit(add)
-                if canAdd {
-                    Button("Add tag", systemImage: "plus.circle.fill", action: add)
-                        .labelStyle(.iconOnly)
+            // Nothing left to pick is a finished state, not a broken one, so
+            // the row goes away rather than sitting there disabled.
+            if !available.isEmpty {
+                Menu {
+                    ForEach(available, id: \.self) { tag in
+                        Button(tag) { onAdd(tag) }
+                    }
+                } label: {
+                    Label("Add tag", systemImage: "plus.circle.fill")
                 }
             }
         } header: {
             Text("Tags")
         } footer: {
             Text("Labels for grouping only. Tags never change cadence.")
-        }
-    }
-
-    private func add() {
-        if onAdd(newTag) {
-            newTag = ""
         }
     }
 }

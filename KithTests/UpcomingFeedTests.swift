@@ -58,8 +58,8 @@ struct UpcomingFeedTests {
         _ = slightly; _ = very
     }
 
-    /// The two segments partition the feed: nothing shows twice, nothing is lost.
-    @Test func upcomingAndOverdueSegmentsPartitionTheFeed() {
+    /// The two modes partition the feed: nothing shows twice, nothing is lost.
+    @Test func upcomingAndOverdueModesPartitionTheFeed() {
         let overdue = person("Overdue", lastLogged: daysAgo(20))
         keyDate(.anniversary, for: overdue, daysAhead: 1)
         person("OnTrack", lastLogged: daysAgo(1))
@@ -247,5 +247,42 @@ struct UpcomingFeedTests {
         #expect(UpcomingHorizon.allCases.map(\.label) == ["Today", "Next 7 days", "Next 30 days"])
         #expect(UpcomingHorizon.default == .month)
         #expect(UpcomingHorizon.week.days == 7)
+    }
+
+    @Test func modeNamesMatchTheTitleDropdown() {
+        #expect(UpcomingMode.allCases.map(\.rawValue) == ["Upcoming", "Overdue"])
+        #expect(UpcomingMode.upcoming.usesHorizon)
+        #expect(!UpcomingMode.overdue.usesHorizon)
+    }
+
+    // MARK: Tag scope
+
+    /// A tag picks a group of people, so it narrows key dates and reach-outs
+    /// together — the coverage figure with them.
+    @Test func aTagScopesDatesReachOutsAndCoverage() {
+        let arjun = person("Arjun", lastLogged: daysAgo(20))
+        arjun.tags = ["work"]
+        keyDate(.birthday, for: arjun, daysAhead: 2)
+
+        let bob = person("Bob", lastLogged: daysAgo(20))
+        bob.tags = ["friends"]
+        keyDate(.anniversary, for: bob, daysAhead: 3)
+
+        let scoped = UpcomingFeed.build(people: people, now: now, calendar: calendar, tag: "work")
+        #expect(scoped.allItems.map(\.person.name) == ["Arjun", "Arjun"])
+        #expect(scoped.coverage == 0)   // one person with a cadence, and they're overdue
+
+        let all = UpcomingFeed.build(people: people, now: now, calendar: calendar)
+        #expect(all.allItems.count == 4)
+    }
+
+    @Test func aTagScopeIgnoresCaseAndNoTagLeavesTheFeedWhole() {
+        let arjun = person("Arjun", lastLogged: daysAgo(20))
+        arjun.tags = ["Work"]
+        person("Bob", lastLogged: daysAgo(20))
+
+        let scoped = UpcomingFeed.build(people: people, now: now, calendar: calendar, tag: "work")
+        #expect(scoped.allItems.map(\.person.name) == ["Arjun"])
+        #expect(UpcomingFeed.build(people: people, now: now, calendar: calendar, tag: nil).allItems.count == 2)
     }
 }

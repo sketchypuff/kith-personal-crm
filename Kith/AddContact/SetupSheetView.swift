@@ -6,6 +6,10 @@ import SwiftUI
 struct SetupSheetView: View {
     let contact: PickedContact
 
+    /// Only for the tag menu's options: the sheet picks from the vocabulary
+    /// rather than growing it. Managed in Settings, not here.
+    @Query private var tags: [Tag]
+
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
@@ -15,7 +19,7 @@ struct SetupSheetView: View {
     @State private var notifyTime: Date
     @State private var hasBirthday: Bool
     @State private var birthday: Date
-    @State private var tagsText = ""
+    @State private var selectedTags: [String] = []
 
     init(contact: PickedContact) {
         self.contact = contact
@@ -70,14 +74,12 @@ struct SetupSheetView: View {
                     }
                 }
 
-                Section {
-                    TextField("Tags, separated by commas", text: $tagsText)
-                        .textInputAutocapitalization(.never)
-                } header: {
-                    Text("Tags")
-                } footer: {
-                    Text("Labels for grouping only. Tags never change cadence.")
-                }
+                TagsSection(
+                    tags: selectedTags,
+                    available: TagVocabulary.options(from: tags, notIn: selectedTags),
+                    onAdd: addTag,
+                    onRemove: removeTag
+                )
             }
             .navigationTitle("New Person")
             .navigationBarTitleDisplayMode(.inline)
@@ -94,6 +96,18 @@ struct SetupSheetView: View {
         .presentationDragIndicator(.visible)
     }
 
+    private func addTag(_ tag: String) {
+        withAnimation {
+            selectedTags.append(tag)
+        }
+    }
+
+    private func removeTag(_ tag: String) {
+        withAnimation {
+            selectedTags.removeAll { TagVocabulary.fold($0) == TagVocabulary.fold(tag) }
+        }
+    }
+
     private func cancel() {
         dismiss()
     }
@@ -103,10 +117,7 @@ struct SetupSheetView: View {
         person.cadence = cadence
         person.notifyDay = notifyDay
         person.notifyTime = notifyTime
-        person.tags = tagsText
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
+        person.tags = selectedTags
         modelContext.insert(person)
 
         if hasBirthday {

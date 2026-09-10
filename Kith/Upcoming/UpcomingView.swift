@@ -8,15 +8,22 @@ struct UpcomingView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var path = NavigationPath()
-    @State private var segment: UpcomingSegment = .upcoming
+    @State private var mode: UpcomingMode = .upcoming
     @State private var horizon: UpcomingHorizon = .default
+    @State private var tag: String?
     @State private var now = Date.now
     @State private var undo: UpcomingUndoRecord?
     @State private var checkCount = 0
     @State private var addFlow = AddContactFlowState()
 
     private var feed: UpcomingFeed {
-        UpcomingFeed.build(people: people, now: now, horizon: horizon)
+        UpcomingFeed.build(people: people, now: now, horizon: horizon, tag: tag)
+    }
+
+    /// Read from everyone, never from the scoped feed, so picking a tag can't
+    /// collapse the row down to the one pill that is already lit.
+    private var tags: [String] {
+        TagVocabulary.all(in: people)
     }
 
     private var actions: UpcomingActions {
@@ -25,9 +32,7 @@ struct UpcomingView: View {
 
     var body: some View {
         let feed = feed
-        // With nothing overdue the picker is hidden, and Upcoming is the whole feed.
-        let activeSegment: UpcomingSegment = feed.hasOverdue ? segment : .upcoming
-        let items = feed.items(for: activeSegment)
+        let items = feed.items(for: mode)
 
         NavigationStack(path: $path) {
             List(items) { item in
@@ -54,24 +59,18 @@ struct UpcomingView: View {
             }
             .listStyle(.plain)
             .safeAreaInset(edge: .top, spacing: 0) {
-                if feed.hasOverdue {
-                    Picker("Show", selection: $segment) {
-                        ForEach(UpcomingSegment.allCases) { segment in
-                            Text(segment.rawValue).tag(segment)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal)
-                    .padding(.bottom, 8)
-                }
+                TagPillRow(tags: tags, selection: $tag)
             }
             .overlay {
                 if items.isEmpty {
                     UpcomingEmptyView(
                         feed: feed,
-                        segment: activeSegment,
+                        mode: mode,
                         hasPeople: !people.isEmpty,
-                        onAdd: beginAdd
+                        tag: tag,
+                        onAdd: beginAdd,
+                        onClearTag: clearTag,
+                        onShowOverdue: { mode = .overdue }
                     )
                 }
             }
@@ -84,11 +83,22 @@ struct UpcomingView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
-            .navigationTitle("Upcoming")
+            // The title names the mode, and the dropdown is how the mode changes.
+            .navigationTitle(mode.rawValue)
             // Named by the same value that bounds the feed, so the header can't
-            // claim a window the list isn't showing.
-            .navigationSubtitle(horizon.label)
+            // claim a window the list isn't showing. Overdue isn't bounded at all.
+            .horizonSubtitle(horizon.label, when: mode.usesHorizon)
             .toolbarTitleDisplayMode(.inline)
+            .toolbarTitleMenu {
+                Picker("Show", selection: $mode) {
+                    ForEach(UpcomingMode.allCases) { item in
+                        // Overdue carries its count, because it's now the only
+                        // hint that anyone is late while the feed looks calm.
+                        Text(label(for: item, in: feed)).tag(item)
+                    }
+                }
+                .pickerStyle(.inline)
+            }
             .scrollEdgeEffectStyle(.soft, for: .top)
             .navigationDestination(for: Person.self) { person in
                 ContactDetailView(person: person)
@@ -100,12 +110,16 @@ struct UpcomingView: View {
                 // Hidden on first run: the empty state's Add Contact button is
                 // the single call to action until someone has been added.
                 if !people.isEmpty {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        UpcomingFilterMenu(horizon: $horizon)
+                    // Overdue ignores the window, so offering to narrow it there
+                    // would be a control that does nothing.
+                    if mode.usesHorizon {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            UpcomingFilterMenu(horizon: $horizon)
+                        }
+                        // Splits the two into separate glass capsules: narrowing the
+                        // feed and adding a person are unrelated acts.
+                        ToolbarSpacer(.fixed, placement: .topBarTrailing)
                     }
-                    // Splits the two into separate glass capsules: narrowing the
-                    // feed and adding a person are unrelated acts.
-                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Add", systemImage: "plus", action: beginAdd)
                             .buttonStyle(.glassProminent)   // the screen's primary CTA, accent-tinted
@@ -119,15 +133,33 @@ struct UpcomingView: View {
         .task(id: undo?.id) {
             await dismissUndoAfterDelay()
         }
+        // Untagging the last person carrying the lit tag would otherwise leave
+        // the feed scoped to a pill that no longer exists.
+        .onChange(of: tags) { _, tags in
+            if let tag, !tags.contains(tag) { clearTag() }
+        }
         .onChange(of: scenePhase) { _, phase in
             handleScenePhase(phase)
         }
+    }
+
+    /// "Overdue (3)" when anyone is late, plain names otherwise.
+    private func label(for mode: UpcomingMode, in feed: UpcomingFeed) -> String {
+        let count = feed.items(for: mode).count
+        guard mode == .overdue, count > 0 else { return mode.rawValue }
+        return "\(mode.rawValue) (\(count))"
     }
 
     // MARK: - Actions
 
     private func beginAdd() {
         addFlow.begin()
+    }
+
+    private func clearTag() {
+        withAnimation {
+            tag = nil
+        }
     }
 
     private func check(_ item: UpcomingItem) {
@@ -182,6 +214,19 @@ struct UpcomingView: View {
             undo = nil
         default:
             break
+        }
+    }
+}
+
+private extension View {
+    /// `.navigationSubtitle` has no "hidden" state, and an empty string still
+    /// reserves the line, so the modifier is applied or it isn't.
+    @ViewBuilder
+    func horizonSubtitle(_ label: String, when shown: Bool) -> some View {
+        if shown {
+            navigationSubtitle(label)
+        } else {
+            self
         }
     }
 }

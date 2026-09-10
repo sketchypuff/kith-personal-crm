@@ -1,11 +1,15 @@
 import SwiftUI
 
-/// The calm states: nobody added yet, fully caught up, or an empty segment.
+/// The calm states: nobody added yet, a tag that hides everyone, fully caught
+/// up, or an empty mode.
 struct UpcomingEmptyView: View {
     let feed: UpcomingFeed
-    let segment: UpcomingSegment
+    let mode: UpcomingMode
     let hasPeople: Bool
+    let tag: String?
     let onAdd: () -> Void
+    let onClearTag: () -> Void
+    let onShowOverdue: () -> Void
 
     var body: some View {
         if !hasPeople {
@@ -21,6 +25,22 @@ struct UpcomingEmptyView: View {
                     .controlSize(.large)
                     .font(.headline)
             }
+        } else if mode == .overdue {
+            ContentUnavailableView(
+                "No one overdue",
+                systemImage: "checkmark.circle",
+                description: Text("Everyone\(tagPhrase) is on track.")
+            )
+        } else if let tag, feed.isEmpty {
+            // The tag scopes the whole feed, so an empty feed here means the
+            // tag hid everyone, not that there is nothing to do.
+            ContentUnavailableView {
+                Label("No one tagged “\(tag)”", systemImage: "tag")
+            } description: {
+                Text("Everyone else is hidden by the filter.")
+            } actions: {
+                Button("Clear tag", action: onClearTag)
+            }
         } else if feed.isEmpty {
             ContentUnavailableView {
                 // Says the window the feed was actually built for, so a
@@ -31,21 +51,28 @@ struct UpcomingEmptyView: View {
                     Text("\(coverage, format: .percent.precision(.fractionLength(0))) on track")
                 }
             }
-        } else {
-            switch segment {
-            case .upcoming:
-                ContentUnavailableView(
-                    "Nothing coming up",
-                    systemImage: "calendar",
-                    description: Text("No dates or reach-outs \(feed.horizon.span).")
-                )
-            case .overdue:
-                ContentUnavailableView(
-                    "No one overdue",
-                    systemImage: "checkmark.circle",
-                    description: Text("Everyone is on track.")
-                )
+        } else if feed.hasOverdue {
+            // The list is empty only because everything left is overdue, and
+            // overdue lives behind the title dropdown. Say so, and offer the switch.
+            ContentUnavailableView {
+                Label("Nothing coming up", systemImage: "calendar")
+            } description: {
+                Text("Everyone left\(tagPhrase) is already overdue.")
+            } actions: {
+                Button("Show overdue", action: onShowOverdue)
             }
+        } else {
+            ContentUnavailableView(
+                "Nothing coming up",
+                systemImage: "calendar",
+                description: Text("No dates or reach-outs\(tagPhrase) \(feed.horizon.span).")
+            )
         }
+    }
+
+    /// " tagged “work”", or nothing at all. Reads inside a sentence either way.
+    private var tagPhrase: String {
+        guard let tag else { return "" }
+        return " tagged “\(tag)”"
     }
 }

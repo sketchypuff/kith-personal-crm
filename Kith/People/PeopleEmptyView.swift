@@ -2,14 +2,14 @@ import Contacts
 import SwiftUI
 
 /// The three roster empty states (People §11): nobody yet, no search results,
-/// or a filter that hides everyone.
+/// or a tag that hides everyone.
 struct PeopleEmptyView: View {
     let hasPeople: Bool
     let searchText: String
-    let filter: RosterFilter
+    let tag: String?
     let contactsStatus: CNAuthorizationStatus
     let onAdd: () -> Void
-    let onClearFilters: () -> Void
+    let onClearTag: () -> Void
 
     @Environment(\.openURL) private var openURL
 
@@ -48,11 +48,11 @@ struct PeopleEmptyView: View {
             ContentUnavailableView.search(text: searchText)
         } else {
             ContentUnavailableView {
-                Label(filter.emptyTitle, systemImage: "line.3.horizontal.decrease.circle")
+                Label(tag.map { "No one tagged “\($0)”" } ?? "No one here", systemImage: "tag")
             } description: {
                 Text("Everyone else is hidden by the filter.")
             } actions: {
-                Button("Clear filters", action: onClearFilters)
+                Button("Clear tag", action: onClearTag)
             }
         }
     }

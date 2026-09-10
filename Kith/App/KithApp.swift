@@ -27,6 +27,9 @@ struct KithApp: App {
                 .preferredColorScheme(theme.colorScheme)
                 .task(id: ObjectIdentifier(coordinator.container)) {
                     SampleData.seedIfRequested(into: coordinator.container.mainContext)
+                    // After the sample seed, so a freshly seeded roster's tags
+                    // land in the vocabulary too.
+                    TagActions(context: coordinator.container.mainContext).seedIfNeeded()
                 }
         }
     }

@@ -20,6 +20,9 @@ struct SettingsView: View {
     /// row and the competing presentations dismiss one another instantly.
     @State private var isPresentingDeveloper = false
 
+    /// The tag vocabulary. Hoisted for the same reason as the card above.
+    @State private var isPresentingTags = false
+
     /// The coalesced reschedule pass (§9): every notification-preference
     /// change restarts the timer, so a burst of flips settles into one pass.
     /// Unstructured on purpose — it must survive switching tabs mid-settle.
@@ -33,6 +36,7 @@ struct SettingsView: View {
         Form {
             NotificationDefaultsSection(notificationsDenied: notificationsDenied, onChange: notificationsDidChange)
             Section {
+                ManageTagsRow(onShow: showTags)
                 ThemeRow()
                 PrivacyLockRows(availability: lockAvailability)
                 SyncRows(iCloudAvailable: iCloudAvailable)
@@ -50,6 +54,9 @@ struct SettingsView: View {
         .sheet(isPresented: $isPresentingDeveloper) {
             DeveloperCardView()
         }
+        .sheet(isPresented: $isPresentingTags) {
+            ManageTagsView()
+        }
         .task {
             await refreshNotificationPermission()
         }
@@ -62,6 +69,10 @@ struct SettingsView: View {
 
     private func showDeveloper() {
         isPresentingDeveloper = true
+    }
+
+    private func showTags() {
+        isPresentingTags = true
     }
 
     private func notificationsDidChange() {

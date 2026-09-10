@@ -277,10 +277,10 @@ struct ContactDetailActionsTests {
         #expect(!actions().addTag("Close Friends", to: p))
         #expect(!actions().addTag("   ", to: p))
         #expect(actions().addTag("work", to: p))
-        #expect(p.tags == ["close friends", "work"])
+        #expect(p.tags == ["Close friends", "Work"])   // starter spelling wins
 
         actions().removeTag("close friends", from: p)
-        #expect(p.tags == ["work"])
+        #expect(p.tags == ["Work"])
 
         #expect(p.cadenceRaw == before.0)
         #expect(p.notifyDayRaw == before.1)
