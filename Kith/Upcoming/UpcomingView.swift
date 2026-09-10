@@ -84,6 +84,9 @@ struct UpcomingView: View {
                 }
             }
             .navigationTitle("Upcoming")
+            // Derived from the constant that actually bounds the feed, so the
+            // two can't drift apart.
+            .navigationSubtitle("Next \(UpcomingFeed.horizonDays) days")
             .toolbarTitleDisplayMode(.inline)
             .scrollEdgeEffectStyle(.soft, for: .top)
             .navigationDestination(for: Person.self) { person in
@@ -98,7 +101,7 @@ struct UpcomingView: View {
                 if !people.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Add", systemImage: "plus", action: beginAdd)
-                            .buttonStyle(.borderedProminent)   // the screen's primary CTA, accent-tinted
+                            .buttonStyle(.glassProminent)   // the screen's primary CTA, accent-tinted
                     }
                 }
             }
