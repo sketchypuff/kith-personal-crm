@@ -13,3 +13,6 @@ build/
 *.xccheckout
 *.xcscmblueprint
 .swiftpm/
+
+# Xcode regenerates this and it holds nothing worth tracking
+*.xcodeproj/project.xcworkspace/
