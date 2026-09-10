@@ -86,8 +86,12 @@ struct PeopleView: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         PeopleFilterMenu(filter: $filter, tags: roster.allTags)
                     }
+                    // Same pairing as Upcoming: the spacer splits the two into
+                    // separate glass capsules, and Add is the prominent one.
+                    ToolbarSpacer(.fixed, placement: .topBarTrailing)
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Add", systemImage: "plus", action: beginAdd)
+                            .buttonStyle(.glassProminent)   // the screen's primary CTA, accent-tinted
                     }
                 }
             }
