@@ -14,6 +14,22 @@ Each heading is a version of the app, with the TestFlight build number beside it
 
 ### Changed
 
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.2] - 2026-09-11 — build 4
+
+A pass over the way the app looks and moves, and a tidier person page.
+
+### Added
+
+### Changed
+
 - The bar that lets you undo a check-in now has the same frosted look as the app's other floating buttons, so it sits over your list instead of on top of it.
 - The tag filter row feels like one piece of glass rather than separate buttons, and the highlight slides between tags instead of blinking from one to the next.
 - Lists now fade softly where they run under the bar at the bottom of the screen and under the filter row at the top, instead of cutting off in a hard line.
@@ -127,6 +143,7 @@ The first complete version of the app. Never released — version 1.1 replaced i
 - **The "Made by" page in Settings closed itself the instant you opened it.**
 - **A stray line above the first row** on the Upcoming and People screens.
 
-[Unreleased]: https://github.com/sketchypuff/kith-personal-crm/compare/de0bd93...HEAD
+[Unreleased]: https://github.com/sketchypuff/kith-personal-crm/compare/dae5dbf...HEAD
+[1.2]: https://github.com/sketchypuff/kith-personal-crm/compare/de0bd93...dae5dbf
 [1.1]: https://github.com/sketchypuff/kith-personal-crm/compare/c713549...de0bd93
 [1.0]: https://github.com/sketchypuff/kith-personal-crm/compare/37b84ce...c713549
