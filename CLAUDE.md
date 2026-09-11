@@ -14,6 +14,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Do not create branches unless asked.** Work lands on the branch already checked out, normally `main`. Read it with `git branch --show-current` rather than trusting a session-start snapshot, which goes stale; if it isn't the branch the work belongs on, say so instead of quietly going along with it.
 - Committing without being asked is worse than waiting: it writes history the user has not reviewed, and pushing puts it somewhere they have to undo rather than simply approve.
 
+## Keep the changelog current
+
+`CHANGELOG.md` follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). **Any change a user would notice goes under `## [Unreleased]` as part of the same task that makes it** — not later, and not in a separate pass. Write the entry when you finish the work, in the same uncommitted state as the code.
+
+**The audience is someone who uses Kith, not someone who builds it.** Write every entry in plain English, the way you would explain the change to a friend holding the phone.
+
+- **No jargon, no code.** Never name a type, file, method, framework, or setting key — no `UpcomingFeed`, no SwiftData, no CloudKit, no `.toolbarTitleMenu`. Say "your data syncs privately through your own iCloud account", not "SwiftData mirrored to a private CloudKit database".
+- **Say what changed for the person using the app, and why it's better.** "The search box only appears once you have six or more people. Below that, reading the list is quicker than typing into it." Not "applied `.searchable` above a threshold constant".
+- **Lead with the plain fact, then the reason if it helps.** One or two sentences per entry is plenty.
+- Group entries under the six standing headings: Added, Changed, Deprecated, Removed, Fixed, Security. Leave a heading empty rather than deleting it; the skeleton is what makes the next entry obvious.
+- Skip what a user cannot observe: refactors, test-only changes, comment edits, `CLAUDE.md` itself. If nothing about using the app changes, it does not belong.
+- **On a version bump**, rename `[Unreleased]` to the new `MARKETING_VERSION`, date it `YYYY-MM-DD`, note the build number beside it (`— build 4`), add a fresh empty `[Unreleased]` above, and update the compare links at the foot of the file.
+- Versions map to `MARKETING_VERSION`, so a TestFlight build that only bumps `CURRENT_PROJECT_VERSION` extends the current version's entry rather than starting a new one.
+
 ## Repository state
 
 `Kith.xcodeproj` is a hand-written Xcode 26 project using **synchronized folder groups** (`Kith/` and `KithTests/`): any file added under those folders is picked up automatically, so there is no per-file bookkeeping in `project.pbxproj`. Product specs live under `prds/`, which is **gitignored** — the specs exist on this machine but are not tracked, so do not assume another checkout has them.
