@@ -1,7 +1,9 @@
 import SwiftUI
 
 /// The identity-and-status band: photo or monogram, name, and the one status
-/// element on the screen — the Next-catchup line. Scrolls with the content.
+/// element on the screen — the Next-catchup line. Scrolls with the content,
+/// and appears on Info only: the timeline is history, and none of this
+/// describes it.
 struct ContactDetailHeader: View {
     let person: Person
     let status: CatchupStatus

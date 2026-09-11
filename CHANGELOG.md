@@ -14,6 +14,13 @@ Each heading is a version of the app, with the TestFlight build number beside it
 
 ### Changed
 
+- The bar that lets you undo a check-in now has the same frosted look as the app's other floating buttons, so it sits over your list instead of on top of it.
+- The tag filter row feels like one piece of glass rather than separate buttons, and the highlight slides between tags instead of blinking from one to the next.
+- Lists now fade softly where they run under the bar at the bottom of the screen and under the filter row at the top, instead of cutting off in a hard line.
+- On People, the search box has moved into the top bar as a small button that opens when you tap it. You get a full extra row of people on screen, and the box is out of the way when you aren't searching.
+- On a person's page, the Info and Timeline switch now stays at the top as you scroll, so you can move between them without scrolling back up.
+- Their photo, name, and next catch-up no longer sit above the Timeline. That's a list of what's already happened, so it now starts at the first entry — their name is in the bar at the top either way.
+
 ### Deprecated
 
 ### Removed

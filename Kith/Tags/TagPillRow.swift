@@ -13,21 +13,30 @@ struct TagPillRow: View {
     /// Scroll id for the All pill, which has no tag of its own.
     private static let allID = "\u{0}all"
 
+    /// Identity space for the pills' glass, so the lit one morphs across the
+    /// row rather than fading out in one place and in again in another.
+    @Namespace private var glass
+
     var body: some View {
         if !tags.isEmpty {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal) {
-                    HStack(spacing: 8) {
-                        TagPill(title: "All", isSelected: selection == nil) {
-                            select(nil)
-                        }
-                        .id(Self.allID)
-
-                        ForEach(tags, id: \.self) { tag in
-                            TagPill(title: tag, isSelected: selection == tag) {
-                                select(tag)
+                    // Adjacent capsules lens against each other here; without a
+                    // container each samples the background alone and the row
+                    // reads flat.
+                    GlassEffectContainer(spacing: 8) {
+                        HStack(spacing: 8) {
+                            TagPill(title: "All", isSelected: selection == nil, glassID: Self.allID, namespace: glass) {
+                                select(nil)
                             }
-                            .id(tag)
+                            .id(Self.allID)
+
+                            ForEach(tags, id: \.self) { tag in
+                                TagPill(title: tag, isSelected: selection == tag, glassID: tag, namespace: glass) {
+                                    select(tag)
+                                }
+                                .id(tag)
+                            }
                         }
                     }
                 }
@@ -61,6 +70,8 @@ struct TagPillRow: View {
 private struct TagPill: View {
     let title: String
     let isSelected: Bool
+    let glassID: String
+    let namespace: Namespace.ID
     let action: () -> Void
 
     var body: some View {
@@ -75,6 +86,9 @@ private struct TagPill: View {
         }
         .font(.subheadline)
         .buttonBorderShape(.capsule)
+        // Identity within the container, so lighting one pill and clearing
+        // another morphs between them rather than cross-fading.
+        .glassEffectID(glassID, in: namespace)
         // The one thing a plain Button won't say for itself.
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }

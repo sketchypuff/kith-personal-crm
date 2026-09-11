@@ -50,6 +50,10 @@ struct PeopleView: View {
             .safeAreaInset(edge: .top, spacing: 0) {
                 TagPillRow(tags: roster.allTags, selection: $tag)
             }
+            // The roster softens under the pill row and the search field rather
+            // than cutting against them, and under the tab bar at the far end.
+            .scrollEdgeEffectStyle(.soft, for: .top)
+            .scrollEdgeEffectStyle(.soft, for: .bottom)
             .overlay {
                 if roster.isEmpty {
                     PeopleEmptyView(
@@ -132,6 +136,9 @@ private extension View {
     func rosterSearchable(text: Binding<String>, enabled: Bool) -> some View {
         if enabled {
             searchable(text: text, prompt: "Search name, notes, tags")
+                // Collapses to a glass magnifier beside Add and expands on tap,
+                // giving the roster back the row the field used to occupy.
+                .searchToolbarBehavior(.minimize)
         } else {
             self
         }

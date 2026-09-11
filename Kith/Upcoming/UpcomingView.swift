@@ -100,6 +100,7 @@ struct UpcomingView: View {
                 .pickerStyle(.inline)
             }
             .scrollEdgeEffectStyle(.soft, for: .top)
+            .scrollEdgeEffectStyle(.soft, for: .bottom)
             .navigationDestination(for: Person.self) { person in
                 ContactDetailView(person: person)
             }

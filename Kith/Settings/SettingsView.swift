@@ -50,6 +50,7 @@ struct SettingsView: View {
             AboutSection(onShowDeveloper: showDeveloper)
         }
         .navigationTitle("Settings")
+        .scrollEdgeEffectStyle(.soft, for: .bottom)
         .toolbarTitleDisplayMode(.inline)
         .sheet(isPresented: $isPresentingDeveloper) {
             DeveloperCardView()

@@ -35,18 +35,18 @@ struct ContactDetailView: View {
         let timeline = TimelineEntry.build(for: person)
 
         List {
-            Section {
-                ContactDetailHeader(person: person, status: status, now: now)
-                Picker("Show", selection: $segment) {
-                    ForEach(ContactDetailSegment.allCases) { segment in
-                        Text(segment.rawValue).tag(segment)
-                    }
+            // Info only. The timeline is history, and the identity band above
+            // it says nothing about the history — the name is already in the
+            // nav bar, and the next-catchup line belongs with the settings
+            // that produce it.
+            if segment == .info {
+                Section {
+                    ContactDetailHeader(person: person, status: status, now: now)
                 }
-                .pickerStyle(.segmented)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
             }
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets())
-            .listRowSeparator(.hidden)
 
             if showsAlreadyInKithNote && !hasDismissedNote {
                 Section {
@@ -82,6 +82,22 @@ struct ContactDetailView: View {
             }
         }
         .listStyle(.insetGrouped)
+        // Pinned rather than scrolled with the header: a mode switch that
+        // scrolls out of sight is a control that hides. Same placement the
+        // two feeds give their tag row, and the soft edge is what separates
+        // it from the content passing underneath.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            Picker("Show", selection: $segment) {
+                ForEach(ContactDetailSegment.allCases) { segment in
+                    Text(segment.rawValue).tag(segment)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
+        }
+        .scrollEdgeEffectStyle(.soft, for: .top)
+        .scrollEdgeEffectStyle(.soft, for: .bottom)
         .animation(.default, value: segment)
         .navigationTitle(person.name)
         .toolbarTitleDisplayMode(.inline)

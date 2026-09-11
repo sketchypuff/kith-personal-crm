@@ -15,8 +15,10 @@ struct UndoToast: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(.regularMaterial, in: .capsule)
-        .shadow(color: .black.opacity(0.1), radius: 8, y: 2)
+        // The app's one floating panel, so the one place a glass surface —
+        // rather than a glass control — is right. Glass carries its own
+        // shadow, which is why there isn't one here.
+        .glassEffect(.regular, in: .capsule)
         .accessibilityElement(children: .contain)
     }
 }

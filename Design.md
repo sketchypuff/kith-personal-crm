@@ -71,16 +71,27 @@ Because status styles have to switch between `.orange`, `.secondary`, and `.tert
 
 ### 2.4 Materials and glass
 
-iOS 26 glass is used sparingly and only for things that float above content:
+iOS 26 glass is used sparingly and only for things that float above content. The deployment target is iOS 26.0, so there is no availability gating and no material fallback anywhere — every entry below is the only path.
 
-- `.buttonStyle(.glassProminent)` — **the primary call to action on a surface**, accent-tinted. Exactly three uses: the toolbar `+` on Upcoming and People, the tick in `NewTagSheet`, and the lit pill in `TagPillRow`.
+**Glass controls**
+
+- `.buttonStyle(.glassProminent)` — **the primary call to action on a surface**, accent-tinted. Four uses: the toolbar `+` on Upcoming and People, the tick in `NewTagSheet`, and the lit pill in `TagPillRow`.
 - `.buttonStyle(.glass)` — an unlit tag pill.
 - `.buttonStyle(.borderedProminent)` + `.controlSize(.large)` + `.font(.headline)` — the call to action **inside a `ContentUnavailableView`**. Empty-state buttons are bordered, not glass, because they sit on a plain background with nothing to refract.
-- `.background(.regularMaterial, in: .capsule)` — the undo toast, the one floating panel in the app.
 - `ToolbarSpacer(.fixed, …)` splits unrelated toolbar acts into separate glass capsules (Upcoming's filter vs. add). Related acts share one.
-- `.scrollEdgeEffectStyle(.soft, for: .top)` on Upcoming, so the list softens under the pill row rather than cutting against it.
 
-**Glass is for controls that float over scrolling content.** It is never a background, never a card, never a section.
+**Glass surfaces**
+
+- `.glassEffect(.regular, in: .capsule)` — the undo toast, the app's one floating panel and the one place a glass *surface* rather than a glass *control* is right. Applied after the padding, because glass goes after layout and appearance modifiers. Glass carries its own shadow, so the toast has none.
+- `GlassEffectContainer(spacing: 8)` wraps the tag pills. **Multiple glass elements that sit together belong in a container** — without one each capsule samples the background alone and the row reads flat. Any future group of adjacent glass elements gets the same treatment.
+- `.glassEffectID(_:in:)` with a `@Namespace` gives each pill an identity inside that container, so lighting one and clearing another morphs between them instead of cross-fading.
+
+**Edge effects** — the rule is: *soften wherever content passes under something.*
+
+- `.scrollEdgeEffectStyle(.soft, for: .top)` on every screen with a control pinned in its top safe-area inset: Upcoming and People (the tag pill row) and Contact Detail (the segment picker).
+- `.scrollEdgeEffectStyle(.soft, for: .bottom)` on **every scrolling surface inside a tab** — both feeds, Contact Detail, and Settings — so content softens under the glass tab bar rather than cutting at it. Sheets don't get it; nothing floats over their bottom edge.
+
+**Glass is for controls that float over scrolling content.** It is never a background, never a card, never a section. Specifically not glass, and each for a reason: `UpcomingCheckButton` (inside a row — content never gets glass), `LockScreenView` and empty-state buttons (plain background, nothing to refract), `PrivacyOverlayView` (must stay opaque or it fails at its only job), and every list row, `Section`, and `ContactDetailHeader` (glass as a card is how an iOS 26 app ends up overdone).
 
 ### 2.5 Iconography
 
@@ -171,6 +182,7 @@ Do that on any new `.plain` list with something in its top safe-area inset.
 
 - **`.toolbarTitleDisplayMode(.inline)` on every screen.** Kith has no large titles.
 - `.navigationSubtitle` names the active scope when one applies. It has no hidden state and an empty string still reserves the line, so it is applied conditionally via a small `@ViewBuilder` extension (`horizonSubtitle`). `.searchable` is handled the same way (`rosterSearchable`) — the modifier is applied or it isn't.
+- **Search minimizes into the toolbar.** `.searchToolbarBehavior(.minimize)` rides along inside `rosterSearchable`, so the roster's search field is a glass magnifier beside the `+` and expands on tap. A screen with something pinned in its top inset shouldn't also spend a full row on a field that is empty most of the time.
 - **The title can be a control.** `UpcomingView` uses `.toolbarTitleMenu` with an inline `Picker` so the title names the mode and the dropdown is how the mode changes. That replaced a segmented control, and it is the pattern for "which version of this screen am I looking at."
 - A count belongs in the dropdown, not in the chrome: `"Overdue (3)"` is the only hint that anyone is late while the feed looks calm.
 - The toolbar `+` is **hidden until at least one person exists**, so first run has exactly one call to action — the empty state's button.
@@ -242,19 +254,21 @@ Only Upcoming's row has a trailing control. **The roster row deliberately has no
 
 Its details are all load-bearing:
 
+- The pills live inside a `GlassEffectContainer(spacing: 8)`, matching the `HStack` spacing, so adjacent capsules lens against each other instead of each sampling the background alone.
+- `.glassEffectID(_:in:)` against a `@Namespace` gives each pill an identity in that container, so changing the selection morphs rather than cross-fades. The All pill uses the same `allID` sentinel it already uses for scrolling.
 - `.contentMargins(.horizontal, 16, for: .scrollContent)` insets the *content*, so pills scroll to the screen edge instead of stopping short.
 - `.scrollClipDisabled()` — a glass pill's shadow is wider than the pill, and clipped it ends in a straight rule across the row.
 - `.scrollIndicators(.hidden)`, and `scrollTo(anchor: .center)` on selection.
 - **Tapping the lit pill clears it**, same as tapping All.
 - `.accessibilityAddTraits(isSelected ? [.isSelected] : [])` — the one thing a plain `Button` won't say for itself.
-- It lives in `.safeAreaInset(edge: .top, spacing: 0)`, so it pins under the toolbar and the list scrolls beneath it.
+- It lives in `.safeAreaInset(edge: .top, spacing: 0)`, so it pins under the toolbar and the list scrolls beneath it (§5.7).
 - It hides itself entirely when there are no tags.
 
 Each tab keeps its own selection, and both clear it when the last person carrying that tag is untagged. If you add a third filterable surface, reuse this component; do not build a variant.
 
 ### 5.5 The undo toast
 
-`UndoToast` — a capsule of `.regularMaterial` with a soft shadow, `.overlay(alignment: .bottom)`, 8 pt off the edge, 5-second auto-dismiss via a cancellable `.task(id: undo?.id)`. Backgrounding commits the action and clears the toast.
+`UndoToast` — a `.glassEffect(.regular, in: .capsule)` capsule, `.overlay(alignment: .bottom)`, 8 pt off the edge, 5-second auto-dismiss via a cancellable `.task(id: undo?.id)`. Backgrounding commits the action and clears the toast. It carries **no shadow**: glass draws its own, and the app has no custom shadows (§9). The "Undo" button inside stays a plain text button — glass nested inside glass is the overdone look §2.4 exists to prevent.
 
 **Undo is offered for the check, and only the check**, because that is the one action that moves a person's clock forward from a single tap. Skip and Remind me tomorrow are reversible in other ways; delete is confirmed instead.
 
@@ -270,6 +284,16 @@ Controls disappear when they have nothing to do, rather than sitting disabled:
 **But conditional *fields* stay put and go disabled.** The Day picker and Time picker in the Notify section are disabled when the cadence doesn't use them, never removed — the shape of the section is part of how it is understood. The notifications switch also stays visible but inert when iOS-level permission is denied, so intent is preserved for when it's re-granted.
 
 The distinction: **hide a control that has nothing to act on; disable a control whose value still matters.**
+
+### 5.7 Pinned top controls
+
+A control that scopes or switches what the list below it shows **pins in `.safeAreaInset(edge: .top, spacing: 0)`** rather than scrolling with the content, and the list gets `.scrollEdgeEffectStyle(.soft, for: .top)` so content softens under it instead of cutting against it.
+
+Two use it: `TagPillRow` on Upcoming and People, and the Info/Timeline `Picker` on Contact Detail. The picker used to be the second row of the header section and scrolled out of sight, which made the screen's one mode switch a control that hides. Both use 16 pt of horizontal and 6 pt of vertical padding, and neither adds a background — a glass pill and a segmented control each bring their own, and the soft edge is what separates them from what passes underneath.
+
+**The list stays a `List`.** Pinning the control is what keeps the content scrollable in the normal way; it is not a reason to reach for a `ScrollView` (§9).
+
+**What the switch scopes, it scopes completely.** `ContactDetailHeader` is part of Info, not part of the screen: the Timeline starts at the first entry. The avatar, name, and next-catchup line all describe *configuration*, and repeating them above a list of history is chrome that says nothing about what's below it — the name is in the nav bar either way.
 
 ---
 
@@ -336,7 +360,7 @@ Most of this is free, which is the point of §1.1. The parts that aren't:
 
 Do not add these back without changing this document first.
 
-- **No custom colours, gradients, or shadows** beyond the toast's single soft shadow.
+- **No custom colours, gradients, or shadows.** Glass draws its own; nothing else in the app has one.
 - **No cards, no custom containers.** Grouping is `Section`.
 - **No red status, no badges, no streaks, no counters** other than the overdue count in the title dropdown.
 - **No custom animation curves, springs, or durations.**
@@ -383,6 +407,7 @@ The Mobbin MCP server is connected and is a good way to settle layout, ordering,
 | Avatars | `Kith/Contacts/ContactAvatarView.swift` |
 | Status wording and tint | `Kith/Models/CatchupStatus.swift`, `Kith/Upcoming/UpcomingItem.swift` |
 | Tag filter | `Kith/Tags/TagPillRow.swift` |
+| Pinned top control | `Kith/Tags/TagPillRow.swift`, `Kith/ContactDetail/ContactDetailView.swift` |
 | Shared tag editor | `Kith/Tags/TagsSection.swift` |
 | Empty states | `Kith/Upcoming/UpcomingEmptyView.swift`, `Kith/People/PeopleEmptyView.swift` |
 | Undo | `Kith/Upcoming/UndoToast.swift` |
