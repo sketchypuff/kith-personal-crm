@@ -3,9 +3,10 @@ import SwiftUI
 /// The tags applied to one person, one per row, added from a fixed list.
 /// Shared by Contact Detail and the Add Contact setup sheet.
 ///
-/// Pick-only, everywhere: no free text. The list is the starter tags plus
-/// whatever is already in use on the roster, so tagging stays a choice from a
-/// short menu rather than a spelling exercise.
+/// Pick-only, everywhere: no free text. The list is whatever the vocabulary
+/// holds, so tagging stays a choice from a short menu rather than a spelling
+/// exercise. The header's Create button is the escape hatch to Manage tags when
+/// the tag you want doesn't exist yet.
 /// Labels only — tags never affect cadence (PRD P0-3).
 struct TagsSection: View {
     let tags: [String]
@@ -13,6 +14,9 @@ struct TagsSection: View {
     let available: [String]
     let onAdd: (String) -> Void
     let onRemove: (String) -> Void
+    /// Opens Manage tags. The picker only offers what the vocabulary already
+    /// holds, so a tag that isn't there yet needs a way out of this screen.
+    let onManageTags: () -> Void
 
     var body: some View {
         Section {
@@ -46,7 +50,16 @@ struct TagsSection: View {
                 }
             }
         } header: {
-            Text("Tags")
+            HStack {
+                Text("Tags")
+                Spacer()
+                // Worded, not a plus: an icon here would read as a second
+                // "Add tag", when this one makes a tag rather than applying one.
+                Button("Create", action: onManageTags)
+                    .font(.body)   // measured to match the header's own cap height
+                    .textCase(nil)   // headers uppercase their text; the button shouldn't inherit that
+                    .accessibilityLabel("Create a tag")
+            }
         } footer: {
             Text("Labels for grouping only. Tags never change cadence.")
         }

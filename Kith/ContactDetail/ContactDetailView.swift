@@ -20,6 +20,9 @@ struct ContactDetailView: View {
     @State private var now = Date.now
     @State private var segment: ContactDetailSegment = .info
     @State private var keyDateEditor: KeyDateEditorItem?
+    /// Presented from the Form, not from inside `TagsSection`: a `.sheet` on a
+    /// `Section` is applied per row and the presentations cancel each other.
+    @State private var isManagingTags = false
     @State private var hasDismissedNote = false
 
     private var actions: ContactDetailActions {
@@ -68,7 +71,8 @@ struct ContactDetailView: View {
                     tags: person.tags,
                     available: TagVocabulary.options(from: tags, notIn: person.tags),
                     onAdd: addTag,
-                    onRemove: removeTag
+                    onRemove: removeTag,
+                    onManageTags: { isManagingTags = true }
                 )
 
                 NotesSection(person: person, onCommit: commitNotes)
@@ -81,6 +85,9 @@ struct ContactDetailView: View {
         .animation(.default, value: segment)
         .navigationTitle(person.name)
         .toolbarTitleDisplayMode(.inline)
+        .sheet(isPresented: $isManagingTags) {
+            ManageTagsView()
+        }
         .sheet(item: $keyDateEditor) { item in
             KeyDateEditorView(item: item) { draft in
                 saveKeyDate(draft, for: item)

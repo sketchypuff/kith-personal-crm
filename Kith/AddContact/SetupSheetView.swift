@@ -20,6 +20,8 @@ struct SetupSheetView: View {
     @State private var hasBirthday: Bool
     @State private var birthday: Date
     @State private var selectedTags: [String] = []
+    /// Presented from the Form for the same reason as Contact Detail's.
+    @State private var isManagingTags = false
 
     init(contact: PickedContact) {
         self.contact = contact
@@ -78,7 +80,8 @@ struct SetupSheetView: View {
                     tags: selectedTags,
                     available: TagVocabulary.options(from: tags, notIn: selectedTags),
                     onAdd: addTag,
-                    onRemove: removeTag
+                    onRemove: removeTag,
+                    onManageTags: { isManagingTags = true }
                 )
             }
             .navigationTitle("New Person")
@@ -92,6 +95,9 @@ struct SetupSheetView: View {
                         .disabled(!canSave)
                 }
             }
+        }
+        .sheet(isPresented: $isManagingTags) {
+            ManageTagsView()
         }
         .presentationDragIndicator(.visible)
     }
