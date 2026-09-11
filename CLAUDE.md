@@ -34,6 +34,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Build settings that shape the code: iOS 26.0 deployment target, Swift 6 with `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` and approachable concurrency. Because of MainActor default isolation, pure value types that `@Model` classes call into (`CadenceEngine`, `KeyDateEngine`, the raw-value enums) are declared `nonisolated`.
 
+`scripts/run.sh` wraps the whole build → install → launch loop, which is the fastest way to see a change running. It resolves the build directory from `xcodebuild -showBuildSettings` rather than hardcoding a DerivedData path, and boots the simulator if it isn't already up. Override the device with `KITH_SIM_DEVICE`.
+
+```bash
+scripts/run.sh            # build, install, launch with sample people
+scripts/run.sh --fresh    # wipe the app's data first, so the sample seed runs again
+scripts/run.sh --shot     # screenshot to /tmp/kith.png once it's up
+scripts/run.sh --test     # the suite, filtered down to failures and the summary
+```
+
+The raw commands, when a step needs running on its own:
+
 ```bash
 # Build
 xcodebuild build -project Kith.xcodeproj -scheme Kith -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
