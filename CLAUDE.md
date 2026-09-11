@@ -161,6 +161,8 @@ Render the monogram immediately; fetch `thumbnailImageData` off the main thread 
 
 ## UI constraints
 
+`Design.md` at the repo root is the full design language — type scale, colour meanings, glass and material use, motion, copy voice, component patterns, and a checklist for designing anything new. Read it before building or changing a screen; the summary below is only the short version.
+
 - **Native SwiftUI components only.** No third-party UI kits, no custom design system. `NavigationStack`, `List`, `Form`, SF Symbols, system colors. Dark mode / Dynamic Type / VoiceOver must come for free.
 - iOS 26 `TabView` uses the `Tab("Upcoming", systemImage:) { … }` builder, not `.tabItem`. One `NavigationStack` per tab; Contact Detail is always pushed, never modal.
 - The one UIKit wrap is `CNContactPickerViewController` via `UIViewControllerRepresentable`, single-select. Don't wrap `UITableView` for the roster.
