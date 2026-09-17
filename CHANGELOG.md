@@ -12,12 +12,32 @@ Each heading is a version of the app, with the TestFlight build number beside it
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.2] - 2026-09-18 — build 5
+
+Build 5 adds a first-visit welcome, ways to get in touch from a person's page,
+and their local time. Build 4, released on 2026-09-11, refreshed the app's
+floating bars and buttons and tidied up the person page.
+
+### Added
+
 - "What it does" in Settings, under About, lets you revisit the welcome screens whenever you like. It won't change your people, settings, or permission choices.
 - A short illustrated welcome now explains Kith on your first visit and helps you add someone and choose when to catch up. You can skip the introduction or leave setup for later.
 - Call, Message, and WhatsApp buttons now sit under a person's name, so you can reach them without going hunting for their number. Tapping one counts as catching up with them, and their timeline remembers which way you got in touch.
 - A person's local time now shows under their name, so you can see at a glance whether it's a reasonable hour to try them. Kith works out where they are from the country code on their phone number — nothing to set up. Countries that keep more than one time, like the United States and Australia, can't be worked out from a number alone, so nothing is shown for them until you say where someone is. You can set or correct anyone's timezone yourself under Notify.
 
 ### Changed
+
+#### Build 5 — 2026-09-18
 
 - The welcome now focuses on staying close to loved ones, with simpler wording and matching text sizes across the privacy explanation.
 - Contacts access is now requested when you choose to add someone, before the contact picker opens. You can still add a person if you decline.
@@ -27,25 +47,7 @@ Each heading is a version of the app, with the TestFlight build number beside it
 - When you come back to Kith after tapping one, a short bar appears offering to undo it, in case you tapped by accident or never actually got through.
 - The WhatsApp button is only there if you have WhatsApp installed, and all three are hidden for anyone whose contact card has no phone number on it.
 
-### Deprecated
-
-### Removed
-
-### Fixed
-
-- If a new person's details can't be saved, the form stays open so you can try again instead of losing your setup.
-- Saving a person now also sets up their enabled reminders.
-- Kith now asks permission to read your Contacts the first time it needs to. Until now it never asked, so it could never load anyone's photo — people who should have had a picture showed their initials instead, with nothing on screen to explain why.
-
-### Security
-
-## [1.2] - 2026-09-11 — build 4
-
-A pass over the way the app looks and moves, and a tidier person page.
-
-### Added
-
-### Changed
+#### Build 4 — 2026-09-11
 
 - The bar that lets you undo a check-in now has the same frosted look as the app's other floating buttons, so it sits over your list instead of on top of it.
 - The tag filter row feels like one piece of glass rather than separate buttons, and the highlight slides between tags instead of blinking from one to the next.
@@ -59,6 +61,10 @@ A pass over the way the app looks and moves, and a tidier person page.
 ### Removed
 
 ### Fixed
+
+- If a new person's details can't be saved, the form stays open so you can try again instead of losing your setup.
+- Saving a person now also sets up their enabled reminders.
+- Kith now asks permission to read your Contacts the first time it needs to. Until now it never asked, so it could never load anyone's photo — people who should have had a picture showed their initials instead, with nothing on screen to explain why.
 
 ### Security
 
@@ -160,7 +166,7 @@ The first complete version of the app. Never released — version 1.1 replaced i
 - **The "Made by" page in Settings closed itself the instant you opened it.**
 - **A stray line above the first row** on the Upcoming and People screens.
 
-[Unreleased]: https://github.com/sketchypuff/kith-personal-crm/compare/dae5dbf...HEAD
-[1.2]: https://github.com/sketchypuff/kith-personal-crm/compare/de0bd93...dae5dbf
+[Unreleased]: https://github.com/sketchypuff/kith-personal-crm/compare/7f6bae7...HEAD
+[1.2]: https://github.com/sketchypuff/kith-personal-crm/compare/de0bd93...7f6bae7
 [1.1]: https://github.com/sketchypuff/kith-personal-crm/compare/c713549...de0bd93
 [1.0]: https://github.com/sketchypuff/kith-personal-crm/compare/37b84ce...c713549
