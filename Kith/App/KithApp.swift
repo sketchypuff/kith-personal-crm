@@ -6,6 +6,8 @@ struct KithApp: App {
     @State private var coordinator = ModelContainerCoordinator()
     @State private var contactImages = ContactImageCache()
     @State private var contactPhones = ContactPhoneCache()
+    @State private var onboarding: OnboardingState
+    @State private var notificationConsent = NotificationConsent()
 
     /// Settings › Other › Theme. Applied here so every scene, including the
     /// lock screen and sheets, follows it.
@@ -15,6 +17,9 @@ struct KithApp: App {
     /// Seed the appearance proxies before the first bar is built; the root
     /// modifier keeps them current from then on.
     init() {
+        _onboarding = State(initialValue: OnboardingState(
+            sampleLaunch: ProcessInfo.processInfo.arguments.contains("-kith-seed-sample")
+        ))
         RoundedChrome.apply()
     }
 
@@ -25,6 +30,8 @@ struct KithApp: App {
                 .environment(coordinator)
                 .environment(contactImages)
                 .environment(contactPhones)
+                .environment(onboarding)
+                .environment(notificationConsent)
                 .modelContainer(coordinator.container)
                 .preferredColorScheme(theme.colorScheme)
                 .task(id: ObjectIdentifier(coordinator.container)) {

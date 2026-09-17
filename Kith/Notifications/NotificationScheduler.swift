@@ -1,78 +1,101 @@
 import Foundation
+import OSLog
 import UserNotifications
 
 /// Thin wrapper over `UNUserNotificationCenter` using the deterministic
 /// identifiers from the Data Model spec, so scheduling is idempotent.
 struct NotificationScheduler {
-    var center: UNUserNotificationCenter = .current()
+    var client: NotificationClient = .live
     /// Optional test hook: remembers every request and cancellation.
     var recorder: NotificationRecorder? = nil
+    var defaults: UserDefaults = AppPreferences.store
 
     func cancel(ids: [String]) {
         recorder?.recordCancel(ids)
-        center.removePendingNotificationRequests(withIdentifiers: ids)
+        if recorder == nil { client.remove(ids) }
+    }
+
+    func cancelAll() {
+        if let recorder {
+            recorder.recordCancel(Array(recorder.pending.keys))
+        } else {
+            client.removeAll()
+        }
     }
 
     /// The single next-day nudge behind "Remind me tomorrow".
     func scheduleRemindTomorrow(for person: Person, at fireAt: Date) {
-        schedule(
-            id: person.remindTomorrowNotificationID,
-            title: person.name,
-            body: "You asked to be reminded to reach out today.",
-            at: fireAt
-        )
+        PlannedNotification(kind: .remindTomorrow(person), fireAt: fireAt).schedule(with: self)
     }
 
     /// The per-person overdue nudge, delivered at the contact's own
     /// notify day/time (PRD P0-6).
     func scheduleReachOut(for person: Person, at fireAt: Date) {
-        schedule(
-            id: person.reachOutNotificationID,
-            title: person.name,
-            body: "Time to reach out.",
-            at: fireAt
-        )
+        PlannedNotification(kind: .reachOut(person), fireAt: fireAt).schedule(with: self)
     }
 
     /// The lead-time reminder for a key date, `daysAhead` days before it (PRD P0-5).
     func scheduleKeyDateLead(_ keyDate: KeyDate, for person: Person, daysAhead: Int, at fireAt: Date) {
-        let when = daysAhead == 1 ? "tomorrow" : "in \(daysAhead) days"
-        schedule(
-            id: keyDate.leadNotificationID,
-            title: person.name,
-            body: "\(keyDate.label) is \(when).",
-            at: fireAt
-        )
+        PlannedNotification(kind: .keyDateLead(keyDate, person, daysAhead: daysAhead), fireAt: fireAt)
+            .schedule(with: self)
     }
 
     /// The day-of reminder for a key date (PRD P0-5).
     func scheduleKeyDateDay(_ keyDate: KeyDate, for person: Person, at fireAt: Date) {
-        schedule(
-            id: keyDate.dayOfNotificationID,
-            title: person.name,
-            body: "\(keyDate.label) is today.",
-            at: fireAt
-        )
+        PlannedNotification(kind: .keyDateDay(keyDate, person), fireAt: fireAt).schedule(with: self)
     }
 
-    private func schedule(id: String, title: String, body: String, at fireAt: Date) {
-        recorder?.recordSchedule(id: id, at: fireAt)
-
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
-        content.sound = .default
-
-        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: fireAt)
-        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
-        let request = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
-
-        Task {
-            let settings = await center.notificationSettings()
-            if settings.authorizationStatus == .notDetermined {
-                _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
-            }
-            try? await center.add(request)
+    func schedule(_ request: ReminderRequest) {
+        if let recorder {
+            recorder.recordSchedule(id: request.id, at: request.fireAt)
+            return
         }
+        Task {
+            do {
+                try await sendIfAllowed(request)
+            } catch {
+                Logger(subsystem: "com.yashshenai.kith", category: "notifications")
+                    .error("Could not schedule reminder: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func sendIfAllowed(_ request: ReminderRequest) async throws {
+        guard allowsDelivery else { return }
+        let status = await client.authorizationStatus()
+        if status == .notDetermined {
+            // Preserve legacy requests; new installs opt in explicitly.
+            guard AppPreferences.notificationChoice(in: defaults) == .legacy,
+                  try await client.authorizeIfNeeded() else { return }
+        } else if ![.authorized, .provisional, .ephemeral].contains(status) {
+            return
+        }
+        guard allowsDelivery else { return }
+        try await client.add(request.notification)
+        if !allowsDelivery { client.remove([request.id]) }
+    }
+
+    func scheduleAndWait(_ requests: [ReminderRequest]) async throws {
+        if let recorder {
+            for request in requests {
+                recorder.recordSchedule(id: request.id, at: request.fireAt)
+            }
+            return
+        }
+        do {
+            for request in requests {
+                try Task.checkCancellation()
+                try await client.add(request.notification)
+            }
+            try Task.checkCancellation()
+        } catch {
+            client.remove(requests.map(\.id))
+            throw error
+        }
+    }
+
+    private var allowsDelivery: Bool {
+        AppPreferences.notificationsEnabled(in: defaults)
+            && ![NotificationChoice.pending, .declined].contains(AppPreferences.notificationChoice(in: defaults))
     }
 }

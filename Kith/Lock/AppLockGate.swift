@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The app-level gate around the tab shell. While locked, the tab tree is not
+/// The app-level gate around onboarding and the tab shell. While locked, neither is
 /// in the hierarchy at all — there is no data access, not even read, behind an
 /// unpassed gate (Settings §6.4). While inactive or backgrounded with the lock
 /// on, the privacy overlay covers whatever is showing (§6.3).
@@ -13,7 +13,7 @@ struct AppLockGate: View {
             if lock.isLocked {
                 LockScreenView(onUnlock: unlock)
             } else {
-                RootTabView()
+                OnboardingGate()
             }
         }
         .overlay {

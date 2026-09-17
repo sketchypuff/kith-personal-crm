@@ -53,13 +53,20 @@ struct NotificationPlanner {
     func rescheduleAll(_ people: [Person]) {
         notifications.cancel(ids: people.flatMap(\.pendingNotificationIDs))
 
-        let candidates = people
-            .flatMap { plans(for: $0) }
-            .sorted { $0.fireAt < $1.fireAt }
-
-        for plan in candidates.prefix(Self.pendingLimit) {
+        for plan in nearestPlans(for: people) {
             plan.schedule(with: notifications)
         }
+    }
+
+    func rescheduleAllAndWait(_ people: [Person]) async throws {
+        notifications.cancel(ids: people.flatMap(\.pendingNotificationIDs))
+        try await notifications.scheduleAndWait(nearestPlans(for: people).map(\.request))
+    }
+
+    private func nearestPlans(for people: [Person]) -> [PlannedNotification] {
+        Array(people.flatMap { plans(for: $0) }
+            .sorted { $0.fireAt < $1.fireAt }
+            .prefix(Self.pendingLimit))
     }
 
     /// Every request this person should have pending right now.

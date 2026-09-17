@@ -26,4 +26,6 @@ struct RootTabView: View {
     RootTabView()
         .modelContainer(SampleData.previewContainer())
         .environment(ContactImageCache())
+        .environment(ContactPhoneCache())
+        .environment(NotificationConsent())
 }

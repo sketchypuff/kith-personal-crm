@@ -15,15 +15,32 @@ struct PlannedNotification {
     let fireAt: Date
 
     func schedule(with scheduler: NotificationScheduler) {
+        scheduler.schedule(request)
+    }
+
+    var request: ReminderRequest {
         switch kind {
         case .reachOut(let person):
-            scheduler.scheduleReachOut(for: person, at: fireAt)
+            ReminderRequest(
+                id: person.reachOutNotificationID, title: person.name,
+                body: "Time to reach out.", fireAt: fireAt
+            )
         case .remindTomorrow(let person):
-            scheduler.scheduleRemindTomorrow(for: person, at: fireAt)
+            ReminderRequest(
+                id: person.remindTomorrowNotificationID, title: person.name,
+                body: "You asked to be reminded to reach out today.", fireAt: fireAt
+            )
         case .keyDateLead(let keyDate, let person, let daysAhead):
-            scheduler.scheduleKeyDateLead(keyDate, for: person, daysAhead: daysAhead, at: fireAt)
+            ReminderRequest(
+                id: keyDate.leadNotificationID, title: person.name,
+                body: "\(keyDate.label) is \(daysAhead == 1 ? "tomorrow" : "in \(daysAhead) days").",
+                fireAt: fireAt
+            )
         case .keyDateDay(let keyDate, let person):
-            scheduler.scheduleKeyDateDay(keyDate, for: person, at: fireAt)
+            ReminderRequest(
+                id: keyDate.dayOfNotificationID, title: person.name,
+                body: "\(keyDate.label) is today.", fireAt: fireAt
+            )
         }
     }
 }

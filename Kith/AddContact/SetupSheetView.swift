@@ -5,6 +5,7 @@ import SwiftUI
 /// The person is not saved until Notify is confirmed (Save).
 struct SetupSheetView: View {
     let contact: PickedContact
+    var onSave: (AddContactResult) -> Void
 
     /// Only for the tag menu's options: the sheet picks from the vocabulary
     /// rather than growing it. Managed in Settings, not here.
@@ -22,9 +23,11 @@ struct SetupSheetView: View {
     @State private var selectedTags: [String] = []
     /// Presented from the Form for the same reason as Contact Detail's.
     @State private var isManagingTags = false
+    @State private var errorMessage: String?
 
-    init(contact: PickedContact) {
+    init(contact: PickedContact, onSave: @escaping (AddContactResult) -> Void = { _ in }) {
         self.contact = contact
+        self.onSave = onSave
         _name = State(initialValue: contact.name)
         _cadence = State(initialValue: AppPreferences.newContactCadence)
         _notifyDay = State(initialValue: AppPreferences.newContactNotifyDay)
@@ -43,7 +46,7 @@ struct SetupSheetView: View {
     }
 
     private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
@@ -100,6 +103,7 @@ struct SetupSheetView: View {
             ManageTagsView()
         }
         .presentationDragIndicator(.visible)
+        .operationErrorAlert("Couldn't save person", message: $errorMessage)
     }
 
     private func addTag(_ tag: String) {
@@ -119,26 +123,25 @@ struct SetupSheetView: View {
     }
 
     private func save() {
-        let person = Person(name: name.trimmingCharacters(in: .whitespaces), linkedContactID: contact.id)
-        person.cadence = cadence
-        person.notifyDay = notifyDay
-        person.notifyTime = notifyTime
-        person.tags = selectedTags
-        modelContext.insert(person)
-
+        var birthdayComponents: DateComponents?
         if hasBirthday {
-            let components = Calendar.current.dateComponents([.year, .month, .day], from: birthday)
-            let keyDate = KeyDate()
-            keyDate.type = .birthday
-            keyDate.month = components.month ?? 1
-            keyDate.day = components.day ?? 1
-            keyDate.year = contact.birthday?.year == nil && components.year == 2000 ? nil : components.year
-            keyDate.person = person
-            modelContext.insert(keyDate)
+            var components = Calendar.current.dateComponents([.year, .month, .day], from: birthday)
+            if contact.birthday?.year == nil && components.year == 2000 {
+                components.year = nil
+            }
+            birthdayComponents = components
         }
-
-        try? modelContext.save()
-        dismiss()
+        let draft = AddContactDraft(
+            name: name, cadence: cadence, notifyDay: notifyDay, notifyTime: notifyTime,
+            tags: selectedTags, birthday: birthdayComponents
+        )
+        do {
+            let result = try AddContactActions(context: modelContext).save(contact: contact, draft: draft)
+            onSave(result)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
 

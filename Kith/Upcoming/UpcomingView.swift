@@ -127,7 +127,7 @@ struct UpcomingView: View {
                     }
                 }
             }
-            .addContactFlow($addFlow, onDuplicate: showExisting)
+            .addContactFlow(addFlow, onDuplicate: showExisting)
         }
         .sensoryFeedback(.success, trigger: checkCount)
         .animation(.default, value: undo?.id)
@@ -237,6 +237,7 @@ private extension View {
         .modelContainer(SampleData.previewContainer())
         .environment(ContactImageCache())
         .environment(ContactPhoneCache())
+        .environment(NotificationConsent())
 }
 
 #Preview("Caught up") {
@@ -244,4 +245,5 @@ private extension View {
         .modelContainer(SampleData.previewContainer(caughtUp: true))
         .environment(ContactImageCache())
         .environment(ContactPhoneCache())
+        .environment(NotificationConsent())
 }

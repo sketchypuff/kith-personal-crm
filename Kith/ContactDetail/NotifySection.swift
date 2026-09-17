@@ -9,10 +9,11 @@ struct NotifySection: View {
     /// What the phone number works out to, so the row can say what Automatic
     /// means for this person rather than leaving it abstract.
     var guessedTimeZone: TimeZone?
+    var onSelectCadence: () -> Void = {}
 
     var body: some View {
         Section("Notify") {
-            Picker("How often", selection: $person.cadence) {
+            Picker("How often", selection: cadenceSelection) {
                 ForEach(Cadence.allCases, id: \.self) { cadence in
                     Text(cadence.label).tag(cadence)
                 }
@@ -39,6 +40,17 @@ struct NotifySection: View {
                 LabeledContent("Timezone", value: timeZoneLabel)
             }
         }
+    }
+
+    // Only the picker setter represents intent; synced changes must not prompt.
+    private var cadenceSelection: Binding<Cadence> {
+        Binding(
+            get: { person.cadence },
+            set: {
+                person.cadence = $0
+                onSelectCadence()
+            }
+        )
     }
 
     private var timeZoneLabel: String {

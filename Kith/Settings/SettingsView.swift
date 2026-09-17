@@ -10,6 +10,7 @@ import UserNotifications
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(NotificationConsent.self) private var notificationConsent
 
     @State private var notificationsDenied = false
     @State private var lockAvailability = LockAuthenticator().availability()
@@ -22,11 +23,13 @@ struct SettingsView: View {
 
     /// The tag vocabulary. Hoisted for the same reason as the card above.
     @State private var isPresentingTags = false
+    @State private var isPresentingOnboarding = false
 
-    /// The coalesced reschedule pass (§9): every notification-preference
-    /// change restarts the timer, so a burst of flips settles into one pass.
+    /// Default-time changes settle into one reschedule pass (§9).
+    /// The notifications switch instead awaits explicit authorization.
     /// Unstructured on purpose — it must survive switching tabs mid-settle.
     @State private var pendingReschedule: Task<Void, Never>?
+    @State private var notificationError: String?
 
     private var actions: SettingsActions {
         SettingsActions(context: modelContext, notifications: NotificationScheduler())
@@ -34,7 +37,13 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            NotificationDefaultsSection(notificationsDenied: notificationsDenied, onChange: notificationsDidChange)
+            NotificationDefaultsSection(
+                notificationsDenied: notificationsDenied,
+                isUpdatingNotifications: notificationConsent.isWorking,
+                onChange: notificationsDidChange,
+                onNotificationsChange: setNotificationsEnabled
+            )
+            .disabled(notificationConsent.isWorking)
             Section {
                 ManageTagsRow(onShow: showTags)
                 ThemeRow()
@@ -47,7 +56,7 @@ struct SettingsView: View {
                     Text("Set a device passcode in iOS Settings to use the lock.")
                 }
             }
-            AboutSection(onShowDeveloper: showDeveloper)
+            AboutSection(onShowOnboarding: showOnboarding, onShowDeveloper: showDeveloper)
         }
         .navigationTitle("Settings")
         .scrollEdgeEffectStyle(.soft, for: .bottom)
@@ -58,15 +67,23 @@ struct SettingsView: View {
         .sheet(isPresented: $isPresentingTags) {
             ManageTagsView()
         }
+        .sheet(isPresented: $isPresentingOnboarding) {
+            OnboardingReplayView()
+        }
         .task {
             await refreshNotificationPermission()
         }
         .onChange(of: scenePhase) { _, phase in
             handleScenePhase(phase)
         }
+        .operationErrorAlert("Couldn't update notifications", message: $notificationError)
     }
 
     // MARK: - Actions
+
+    private func showOnboarding() {
+        isPresentingOnboarding = true
+    }
 
     private func showDeveloper() {
         isPresentingDeveloper = true
@@ -83,6 +100,22 @@ struct SettingsView: View {
             try? await Task.sleep(for: .milliseconds(400))
             guard !Task.isCancelled else { return }
             actions.rescheduleAllNotifications()
+        }
+    }
+
+    private func setNotificationsEnabled(_ enabled: Bool) {
+        pendingReschedule?.cancel()
+        if !enabled {
+            notificationConsent.decline()
+            return
+        }
+        Task {
+            do {
+                _ = try await notificationConsent.enable(in: modelContext)
+                await refreshNotificationPermission()
+            } catch {
+                notificationError = error.localizedDescription
+            }
         }
     }
 
@@ -109,4 +142,5 @@ struct SettingsView: View {
     }
     .modelContainer(SampleData.previewContainer())
     .environment(ModelContainerCoordinator(syncEnabled: false, storeURL: nil))
+    .environment(NotificationConsent())
 }

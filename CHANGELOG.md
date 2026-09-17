@@ -12,11 +12,17 @@ Each heading is a version of the app, with the TestFlight build number beside it
 
 ### Added
 
+- "What it does" in Settings, under About, lets you revisit the welcome screens whenever you like. It won't change your people, settings, or permission choices.
+- A short illustrated welcome now explains Kith on your first visit and helps you add someone and choose when to catch up. You can skip the introduction or leave setup for later.
 - Call, Message, and WhatsApp buttons now sit under a person's name, so you can reach them without going hunting for their number. Tapping one counts as catching up with them, and their timeline remembers which way you got in touch.
 - A person's local time now shows under their name, so you can see at a glance whether it's a reasonable hour to try them. Kith works out where they are from the country code on their phone number — nothing to set up. Countries that keep more than one time, like the United States and Australia, can't be worked out from a number alone, so nothing is shown for them until you say where someone is. You can set or correct anyone's timezone yourself under Notify.
 
 ### Changed
 
+- The welcome now focuses on staying close to loved ones, with simpler wording and matching text sizes across the privacy explanation.
+- Contacts access is now requested when you choose to add someone, before the contact picker opens. You can still add a person if you decline.
+- The welcome's privacy page has richer artwork: a softly lit lock, a contact card, and a small cloud to reflect your people and private iCloud sync.
+- New users are asked about notifications when they have a reminder to receive, rather than at launch. Choosing "Not now" keeps reminders in Upcoming without asking again; notifications can be enabled later in Settings.
 - Tapping one of those buttons more than once in a day only counts as catching up once. A call that rings out followed by a message is one conversation, not two.
 - When you come back to Kith after tapping one, a short bar appears offering to undo it, in case you tapped by accident or never actually got through.
 - The WhatsApp button is only there if you have WhatsApp installed, and all three are hidden for anyone whose contact card has no phone number on it.
@@ -27,6 +33,8 @@ Each heading is a version of the app, with the TestFlight build number beside it
 
 ### Fixed
 
+- If a new person's details can't be saved, the form stays open so you can try again instead of losing your setup.
+- Saving a person now also sets up their enabled reminders.
 - Kith now asks permission to read your Contacts the first time it needs to. Until now it never asked, so it could never load anyone's photo — people who should have had a picture showed their initials instead, with nothing on screen to explain why.
 
 ### Security

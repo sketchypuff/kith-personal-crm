@@ -18,6 +18,7 @@ struct ContactDetailView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
     @Environment(ContactPhoneCache.self) private var phoneNumbers
+    @Environment(NotificationConsent.self) private var notificationConsent
 
     @State private var now = Date.now
     @State private var segment: ContactDetailSegment = .info
@@ -36,6 +37,8 @@ struct ContactDetailView: View {
     /// immediately, but the confirmation can only be read once Kith is back.
     @State private var pendingUndo: TouchUndoRecord?
     @State private var undo: TouchUndoRecord?
+    @State private var reminderWasConfigured = false
+    @State private var reminderError: String?
 
     private var actions: ContactDetailActions {
         ContactDetailActions(context: modelContext, notifications: NotificationScheduler())
@@ -100,7 +103,11 @@ struct ContactDetailView: View {
 
             switch segment {
             case .info:
-                NotifySection(person: person, guessedTimeZone: guessedTimeZone)
+                NotifySection(
+                    person: person,
+                    guessedTimeZone: guessedTimeZone,
+                    onSelectCadence: considerReminderInvitation
+                )
 
                 DatesSection(
                     keyDates: keyDates,
@@ -158,7 +165,7 @@ struct ContactDetailView: View {
         .sheet(isPresented: $isManagingTags) {
             ManageTagsView()
         }
-        .sheet(item: $keyDateEditor) { item in
+        .sheet(item: $keyDateEditor, onDismiss: keyDateEditorDidDismiss) { item in
             KeyDateEditorView(item: item) { draft in
                 saveKeyDate(draft, for: item)
             }
@@ -179,6 +186,7 @@ struct ContactDetailView: View {
         .task(id: undo?.id) {
             await dismissUndoAfterDelay()
         }
+        .operationErrorAlert("Couldn't update reminders", message: $reminderError)
     }
 
     // MARK: - Actions
@@ -271,6 +279,22 @@ struct ContactDetailView: View {
                 actions.updateKeyDate(keyDate, with: draft)
             }
         }
+        reminderWasConfigured = draft.reminderEnabled
+    }
+
+    private func keyDateEditorDidDismiss() {
+        guard reminderWasConfigured else { return }
+        reminderWasConfigured = false
+        considerReminderInvitation()
+    }
+
+    private func considerReminderInvitation() {
+        do {
+            try modelContext.save()
+            notificationConsent.considerReminder(for: person)
+        } catch {
+            reminderError = error.localizedDescription
+        }
     }
 
     private func addTag(_ tag: String) {
@@ -328,6 +352,7 @@ struct ContactDetailView: View {
     .modelContainer(container)
     .environment(ContactImageCache())
     .environment(ContactPhoneCache())
+    .environment(NotificationConsent())
 }
 
 #Preview("Never, dates only") {
@@ -339,4 +364,5 @@ struct ContactDetailView: View {
     .modelContainer(container)
     .environment(ContactImageCache())
     .environment(ContactPhoneCache())
+    .environment(NotificationConsent())
 }

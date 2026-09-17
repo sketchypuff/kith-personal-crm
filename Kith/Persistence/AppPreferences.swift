@@ -24,6 +24,10 @@ enum AppPreferences {
         static let lockGracePeriod = "lockGracePeriod"               // LockGracePeriod raw value (Settings §6.2)
         static let appTheme = "appTheme"                             // AppTheme raw value; default system
         static let tagsSeeded = "tagsSeeded"                         // the starter tags were written once
+        static let onboardingStep = "onboardingStep"
+        static let onboardingPersonID = "onboardingPersonID"
+        static let notificationChoice = "notificationChoice"
+        static let notificationInvitationPersonID = "notificationInvitationPersonID"
     }
 
     // MARK: - App Group suite
@@ -56,6 +60,11 @@ enum AppPreferences {
     /// key as false, so an absent value has to be treated as true explicitly.
     static func notificationsEnabled(in store: UserDefaults) -> Bool {
         store.object(forKey: Key.notificationsEnabled) as? Bool ?? true
+    }
+
+    static func notificationChoice(in store: UserDefaults = store) -> NotificationChoice {
+        guard let raw = store.string(forKey: Key.notificationChoice) else { return .legacy }
+        return NotificationChoice(rawValue: raw) ?? .declined
     }
 
     /// Defaults to on when a usable iCloud account exists, off otherwise

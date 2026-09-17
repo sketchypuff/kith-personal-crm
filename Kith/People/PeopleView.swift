@@ -84,7 +84,7 @@ struct PeopleView: View {
                     }
                 }
             }
-            .addContactFlow($addFlow, onDuplicate: showExisting)
+            .addContactFlow(addFlow, onDuplicate: showExisting)
         }
         .animation(.default, value: tag)
         // Untagging the last person carrying the lit tag would otherwise leave
@@ -150,6 +150,7 @@ private extension View {
         .modelContainer(SampleData.previewContainer())
         .environment(ContactImageCache())
         .environment(ContactPhoneCache())
+        .environment(NotificationConsent())
 }
 
 #Preview("Empty") {
@@ -157,4 +158,5 @@ private extension View {
         .modelContainer(ModelContainerCoordinator.inMemory())
         .environment(ContactImageCache())
         .environment(ContactPhoneCache())
+        .environment(NotificationConsent())
 }

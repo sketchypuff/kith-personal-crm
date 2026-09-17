@@ -2,14 +2,16 @@ import SwiftUI
 
 /// The notifications switch plus the seed for every new contact: frequency,
 /// day, and the default time (which also drives key-date reminders). Each
-/// write lands in the App Group suite immediately; the switch and the time
-/// ask the parent for the coalesced reschedule pass, while frequency and day
-/// only affect the next add. The switch stays visible but inert while
+/// default writes to the App Group immediately. The time asks for a coalesced
+/// reschedule; the switch delegates explicit permission and scheduling to its
+/// parent. Frequency and day only affect the next add. The switch stays inert while
 /// iOS-level permission is denied, so intent is preserved for when it's
 /// re-granted.
 struct NotificationDefaultsSection: View {
     let notificationsDenied: Bool
     let onChange: () -> Void
+    let onNotificationsChange: @MainActor (Bool) -> Void
+    let isUpdatingNotifications: Bool
 
     @AppStorage(AppPreferences.Key.notificationsEnabled, store: AppPreferences.store)
     private var notificationsEnabled = true
@@ -27,16 +29,23 @@ struct NotificationDefaultsSection: View {
 
     @State private var reminderTime: Date
 
-    init(notificationsDenied: Bool, onChange: @escaping () -> Void) {
+    init(
+        notificationsDenied: Bool,
+        isUpdatingNotifications: Bool,
+        onChange: @escaping () -> Void,
+        onNotificationsChange: @escaping @MainActor (Bool) -> Void
+    ) {
         self.notificationsDenied = notificationsDenied
+        self.isUpdatingNotifications = isUpdatingNotifications
         self.onChange = onChange
+        self.onNotificationsChange = onNotificationsChange
         _reminderTime = State(initialValue: AppPreferences.defaultReminderTime)
     }
 
     var body: some View {
         Section {
-            Toggle("Notifications", isOn: $notificationsEnabled)
-                .disabled(notificationsDenied)
+            Toggle("Notifications", isOn: notificationSelection)
+                .disabled(notificationsDenied || isUpdatingNotifications)
 
             Picker("Frequency", selection: $cadence) {
                 ForEach(Cadence.allCases, id: \.self) { cadence in
@@ -58,15 +67,24 @@ struct NotificationDefaultsSection: View {
             Text("Notification defaults")
         } footer: {
             if notificationsDenied {
-                Text("Turned off for Kith in iOS Settings.")
+                VStack(alignment: .leading) {
+                    Text("Turned off for Kith in iOS Settings.")
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        Link("Open iOS Settings", destination: url)
+                    }
+                }
             }
         }
         .onChange(of: reminderTime) { _, time in
             reminderTimeDidChange(time)
         }
-        .onChange(of: notificationsEnabled) {
-            onChange()
-        }
+    }
+
+    private var notificationSelection: Binding<Bool> {
+        Binding(
+            get: { notificationsEnabled },
+            set: { onNotificationsChange($0) }
+        )
     }
 
     private func reminderTimeDidChange(_ time: Date) {

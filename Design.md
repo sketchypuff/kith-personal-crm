@@ -10,7 +10,7 @@ This is a companion to the specs in `prds/`, not a replacement. **The specs own 
 
 Everything else in this document is a consequence of these.
 
-1. **Native or nothing.** Kith is built entirely from stock SwiftUI. No third-party UI kits, no custom design system, no bespoke drawing. If a look can only be achieved by re-implementing a system control, the look is wrong, not the rule.
+1. **Native or nothing.** Kith's controls are built entirely from stock SwiftUI. No third-party UI kits, no custom design system, no bespoke controls. The first-run introduction uses original, pre-rendered decorative illustrations; they never replace a control. If a look can only be achieved by re-implementing a system control, the look is wrong, not the rule.
 2. **Calm over urgent.** This is an app about people you like. Nothing shames, counts down, or turns red. Overdue is *information*, rendered in secondary orange (`UpcomingRow.subtitleStyle`, `PeopleRow.subtitleStyle`, `ContactDetailHeader.statusStyle`), never a red badge and never a scolding sentence.
 3. **One row, one tap.** Every row in the feed resolves with a single tap on a single control. Secondary acts hide in swipes and menus; they never compete with the primary one.
 4. **The screen tells the truth.** A filtered list says which filter it is under (`.navigationSubtitle(horizon.label)`); an empty list says *why* it is empty (`UpcomingEmptyView` has six distinct states); a destructive dialog says exactly what it will touch (`ManageTagsView.deletionWarning`). The app never lets a quiet control silently change what you are looking at.
@@ -263,7 +263,7 @@ Local time is the app's one `TimelineView`, at `.everyMinute`. It earns it: ever
 
 ### 5.5 The tag pill row
 
-`TagPillRow` is **the app's only `ScrollView`**, and the only hand-laid-out component. It exists because no system component fits: a segmented picker can't scroll and forces equal widths. It earns the exception by being made entirely of stock `Button`s in `.glass` / `.glassProminent` with `.buttonBorderShape(.capsule)`.
+`TagPillRow` is **the main app's only `ScrollView`**, and its only hand-laid-out control. The first-run welcome pages also use native vertical scrolling so large text never loses its way to the next step. The pill row exists because no system component fits: a segmented picker can't scroll and forces equal widths. It earns the exception by being made entirely of stock `Button`s in `.glass` / `.glassProminent` with `.buttonBorderShape(.capsule)`.
 
 Its details are all load-bearing:
 
@@ -333,7 +333,7 @@ Every screen that shows a relative date keeps `@State private var now = Date.now
 
 ### 6.4 Coalescing and painting
 
-- A burst of preference flips settles into one reschedule pass with a 400 ms cancellable delay (`SettingsView.notificationsDidChange`). The task is unstructured on purpose — it must survive switching tabs mid-settle.
+- A burst of default-reminder-time changes settles into one reschedule pass with a 400 ms cancellable delay (`SettingsView.notificationsDidChange`). The task is unstructured on purpose — it must survive switching tabs mid-settle. The notifications switch instead waits for explicit permission and scheduling before showing itself as enabled.
 - A synchronous, expensive operation gets a short `Task.sleep` first so its in-flight state can paint (`SyncRows` sleeps 300 ms so "Updating…" appears before the container rebuild blocks).
 - A control that triggers an expensive change is `.disabled` while it is in flight, with a re-entry guard against the echo when a failure snaps it back.
 
@@ -375,16 +375,16 @@ Most of this is free, which is the point of §1.1. The parts that aren't:
 
 Do not add these back without changing this document first.
 
-- **No custom colours, gradients, or shadows.** Glass draws its own; nothing else in the app has one.
+- **No custom UI colours, gradients, or shadows.** Glass draws its own. The exported onboarding illustrations have their own restrained materials, lighting, and matched light/dark variants; those treatments do not extend to controls or existing screens.
 - **No cards, no custom containers.** Grouping is `Section`.
 - **No red status, no badges, no streaks, no counters** other than the overdue count in the title dropdown.
 - **No custom animation curves, springs, or durations.**
 - **No second haptic.**
-- **No `ScrollView`** other than the tag pill row. Everything else is a `List` or a `Form`.
+- **No `ScrollView`** other than the tag pill row and the first-run welcome pages. Existing screens remain a `List` or a `Form`.
 - **No large navigation titles.**
 - **No modal Contact Detail.**
 - **No manual contact entry** in v1 — adding is from Contacts, one at a time.
-- **No onboarding flow.** The first-run empty state is the onboarding.
+- **First-run setup stays separate from replay.** Three native, illustrated introduction pages lead to optional contact setup and contextual notification consent. Skip leads to setup; setup can be deferred. Settings → About → What it does replays only the three introduction pages in a dismissible sheet, without changing people, preferences, or permission choices. No questionnaires, forced permissions, or tutorial overlays. Existing users keep the ordinary empty states.
 - **No `UITableView` wrapping.** The one UIKit wrap in the app is `CNContactPickerViewController`.
 
 ---
