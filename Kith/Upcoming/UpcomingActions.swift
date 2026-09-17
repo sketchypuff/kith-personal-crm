@@ -1,7 +1,9 @@
 import Foundation
 import SwiftData
 
-/// The core-loop mutations. Upcoming is the only place a touch is logged.
+/// The core-loop mutations. Upcoming's check is the primary place a touch is
+/// logged; Contact Detail's quick actions are the only other one, and both go
+/// through `TouchLog` so the clock rules can't drift apart.
 struct UpcomingActions {
     let context: ModelContext
     let notifications: NotificationScheduler
@@ -10,26 +12,28 @@ struct UpcomingActions {
     /// nudge is scheduled either. The hold itself still applies.
     var notificationsEnabled: () -> Bool = { AppPreferences.notificationsEnabled }
 
+    private var touchLog: TouchLog {
+        TouchLog(context: context, notifications: notifications)
+    }
+
     /// Check on a person row: Touch dated now, clock reset, hold cleared.
     @discardableResult
-    func log(_ person: Person) -> UpcomingUndoRecord {
-        let record = UpcomingUndoRecord(
+    func log(_ person: Person) -> TouchUndoRecord {
+        let record = TouchUndoRecord(
             person: person,
             touch: Touch(date: now()),
             previousLastLoggedAt: person.lastLoggedAt,
-            previousRemindOn: person.remindOn,
-            keyDate: nil,
-            previousLastHandledAt: nil
+            previousRemindOn: person.remindOn
         )
-        applyTouch(record)
+        touchLog.apply(record)
         return record
     }
 
     /// Check on a key-date row: the occurrence is handled until the next
     /// recurrence *and* a touch is logged (wishing happy birthday counts).
     @discardableResult
-    func handle(_ keyDate: KeyDate, for person: Person) -> UpcomingUndoRecord {
-        let record = UpcomingUndoRecord(
+    func handle(_ keyDate: KeyDate, for person: Person) -> TouchUndoRecord {
+        let record = TouchUndoRecord(
             person: person,
             touch: Touch(date: now()),
             previousLastLoggedAt: person.lastLoggedAt,
@@ -38,18 +42,13 @@ struct UpcomingActions {
             previousLastHandledAt: keyDate.lastHandledAt
         )
         keyDate.lastHandledAt = record.touch.date
-        applyTouch(record)
+        touchLog.apply(record)
         return record
     }
 
     /// Reverses a check. Safe to call once per record.
-    func undo(_ record: UpcomingUndoRecord) {
-        let person = record.person
-        person.lastLoggedAt = record.previousLastLoggedAt
-        person.remindOn = record.previousRemindOn
-        record.keyDate?.lastHandledAt = record.previousLastHandledAt
-        context.delete(record.touch)
-        save()
+    func undo(_ record: TouchUndoRecord) {
+        touchLog.undo(record)
     }
 
     /// Holds the person out of Upcoming until tomorrow and schedules one next-day nudge.
@@ -75,16 +74,6 @@ struct UpcomingActions {
         let marker = SkipMarker(date: now())
         marker.person = person
         context.insert(marker)
-        notifications.cancel(ids: [person.reachOutNotificationID, person.remindTomorrowNotificationID])
-        save()
-    }
-
-    private func applyTouch(_ record: UpcomingUndoRecord) {
-        let person = record.person
-        record.touch.person = person
-        context.insert(record.touch)
-        person.lastLoggedAt = record.touch.date
-        person.remindOn = nil
         notifications.cancel(ids: [person.reachOutNotificationID, person.remindTomorrowNotificationID])
         save()
     }

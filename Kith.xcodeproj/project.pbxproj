@@ -341,7 +341,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Kith-Info.plist";
-				INFOPLIST_KEY_NSContactsUsageDescription = "Kith shows the photos of the people you add and reads a contact's birthday when you add them.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "Kith shows the photos of the people you add, reads a contact's birthday when you add them, and uses their number for the call and message buttons on their page.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Kith uses Face ID to unlock the app when the privacy lock is on.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -376,7 +376,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Kith-Info.plist";
-				INFOPLIST_KEY_NSContactsUsageDescription = "Kith shows the photos of the people you add and reads a contact's birthday when you add them.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "Kith shows the photos of the people you add, reads a contact's birthday when you add them, and uses their number for the call and message buttons on their page.";
 				INFOPLIST_KEY_NSFaceIDUsageDescription = "Kith uses Face ID to unlock the app when the privacy lock is on.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

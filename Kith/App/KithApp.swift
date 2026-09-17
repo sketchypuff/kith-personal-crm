@@ -5,6 +5,7 @@ import SwiftUI
 struct KithApp: App {
     @State private var coordinator = ModelContainerCoordinator()
     @State private var contactImages = ContactImageCache()
+    @State private var contactPhones = ContactPhoneCache()
 
     /// Settings › Other › Theme. Applied here so every scene, including the
     /// lock screen and sheets, follows it.
@@ -23,6 +24,7 @@ struct KithApp: App {
                 .roundedTypeface()   // SF Rounded everywhere, SwiftUI text and UIKit chrome alike
                 .environment(coordinator)
                 .environment(contactImages)
+                .environment(contactPhones)
                 .modelContainer(coordinator.container)
                 .preferredColorScheme(theme.colorScheme)
                 .task(id: ObjectIdentifier(coordinator.container)) {

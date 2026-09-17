@@ -5,7 +5,7 @@ import Foundation
 /// drawn distinctly and is never counted as a touch (PRD P0-8).
 struct TimelineEntry: Identifiable, Equatable {
     enum Kind: Equatable {
-        case touch(note: String?)
+        case touch(TouchKind, note: String?)
         case skipped
     }
 
@@ -18,10 +18,27 @@ struct TimelineEntry: Identifiable, Equatable {
         return false
     }
 
+    /// "Called", "Messaged", "WhatsApp", "Reached out" — or "Skipped".
+    var title: String {
+        switch kind {
+        case .touch(let touchKind, _): touchKind.timelineTitle
+        case .skipped: "Skipped"
+        }
+    }
+
+    var note: String? {
+        if case .touch(_, let note) = kind { return note }
+        return nil
+    }
+
     static func build(for person: Person) -> [TimelineEntry] {
         let touches = (person.touches ?? []).map { touch in
             let note = touch.note?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            return TimelineEntry(id: touch.id, date: touch.date, kind: .touch(note: note.isEmpty ? nil : note))
+            return TimelineEntry(
+                id: touch.id,
+                date: touch.date,
+                kind: .touch(touch.kind, note: note.isEmpty ? nil : note)
+            )
         }
         let skips = (person.skipMarkers ?? []).map { marker in
             TimelineEntry(id: marker.id, date: marker.date, kind: .skipped)

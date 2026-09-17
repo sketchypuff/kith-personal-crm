@@ -12,13 +12,21 @@ Each heading is a version of the app, with the TestFlight build number beside it
 
 ### Added
 
+- Call, Message, and WhatsApp buttons now sit under a person's name, so you can reach them without going hunting for their number. Tapping one counts as catching up with them, and their timeline remembers which way you got in touch.
+
 ### Changed
+
+- Tapping one of those buttons more than once in a day only counts as catching up once. A call that rings out followed by a message is one conversation, not two.
+- When you come back to Kith after tapping one, a short bar appears offering to undo it, in case you tapped by accident or never actually got through.
+- The WhatsApp button is only there if you have WhatsApp installed, and all three are hidden for anyone whose contact card has no phone number on it.
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+
+- Kith now asks permission to read your Contacts the first time it needs to. Until now it never asked, so it could never load anyone's photo — people who should have had a picture showed their initials instead, with nothing on screen to explain why.
 
 ### Security
 

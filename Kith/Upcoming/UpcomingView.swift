@@ -12,7 +12,7 @@ struct UpcomingView: View {
     @State private var horizon: UpcomingHorizon = .default
     @State private var tag: String?
     @State private var now = Date.now
-    @State private var undo: UpcomingUndoRecord?
+    @State private var undo: TouchUndoRecord?
     @State private var checkCount = 0
     @State private var addFlow = AddContactFlowState()
 
@@ -236,10 +236,12 @@ private extension View {
     UpcomingView()
         .modelContainer(SampleData.previewContainer())
         .environment(ContactImageCache())
+        .environment(ContactPhoneCache())
 }
 
 #Preview("Caught up") {
     UpcomingView()
         .modelContainer(SampleData.previewContainer(caughtUp: true))
         .environment(ContactImageCache())
+        .environment(ContactPhoneCache())
 }

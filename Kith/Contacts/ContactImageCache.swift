@@ -12,14 +12,14 @@ final class ContactImageCache {
         images[contactID]
     }
 
-    /// Returns the cached image or fetches it once. Never requests permission.
+    /// Returns the cached image or fetches it once, asking for Contacts access
+    /// the first time a linked card is read.
     func image(for contactID: String) async -> UIImage? {
         guard !contactID.isEmpty else { return nil }
         if let image = images[contactID] { return image }
         if misses.contains(contactID) { return nil }
 
-        let status = CNContactStore.authorizationStatus(for: .contacts)
-        guard status == .authorized || status == .limited else { return nil }
+        guard await ContactAccess.ensureGranted() else { return nil }
 
         let data = await Self.fetchThumbnailData(contactID: contactID)
         if let data, let image = UIImage(data: data) {

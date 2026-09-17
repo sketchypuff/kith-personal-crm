@@ -41,6 +41,95 @@ struct ContactDetailActionsTests {
         return person
     }
 
+    // MARK: - Quick actions
+
+    @Test func aTappedQuickActionLogsACatchUpAndResetsTheClock() throws {
+        let p = person(lastLoggedDaysAgo: 30)
+        p.remindOn = calendar.date(byAdding: .day, value: 1, to: now)
+
+        let record = try #require(actions().logQuickAction(.call, for: p))
+        #expect(record.touch.kind == .called)
+        #expect(p.lastLoggedAt == now)
+        #expect(p.remindOn == nil)
+        #expect(p.touches?.count == 1)
+    }
+
+    @Test func eachButtonRecordsHowYouGotInTouch() throws {
+        for (action, kind) in [
+            (QuickAction.call, TouchKind.called),
+            (.message, .messaged),
+            (.whatsapp, .whatsapp),
+        ] {
+            let p = person(lastLoggedDaysAgo: 30)
+            let record = try #require(actions().logQuickAction(action, for: p))
+            #expect(record.touch.kind == kind)
+        }
+    }
+
+    /// A call that rings out followed by a WhatsApp is one catch-up, not two.
+    @Test func aSecondTapTheSameDayLogsNothing() {
+        let p = person(lastLoggedDaysAgo: 30)
+        #expect(actions().logQuickAction(.call, for: p) != nil)
+        #expect(actions().logQuickAction(.whatsapp, for: p) == nil)
+        #expect(p.touches?.count == 1)
+    }
+
+    /// The cap is on today, not on the person: yesterday's catch-up doesn't
+    /// stop today's.
+    @Test func yesterdaysCatchUpDoesNotBlockTodays() {
+        let p = person(lastLoggedDaysAgo: 30)
+        let yesterday = Touch(date: calendar.date(byAdding: .day, value: -1, to: now)!)
+        yesterday.person = p
+        container.mainContext.insert(yesterday)
+
+        #expect(actions().logQuickAction(.call, for: p) != nil)
+        #expect(p.touches?.count == 2)
+    }
+
+    /// A skip is the opposite of a touch, so it never stands in for one.
+    @Test func aSkipTodayDoesNotCountAsACatchUp() {
+        let p = person(lastLoggedDaysAgo: 30)
+        let marker = SkipMarker(date: now)
+        marker.person = p
+        container.mainContext.insert(marker)
+
+        #expect(actions().logQuickAction(.message, for: p) != nil)
+    }
+
+    @Test func loggingAQuickActionClearsTheNudges() {
+        // Not overdue, so there is a future nudge to clear in the first place.
+        let p = person(lastLoggedDaysAgo: 1)
+        actions().notifyDidChange(p)
+        #expect(recorder.pending[p.reachOutNotificationID] != nil)
+
+        actions().logQuickAction(.call, for: p)
+        #expect(recorder.pending[p.reachOutNotificationID] == nil)
+        #expect(recorder.pending[p.remindTomorrowNotificationID] == nil)
+    }
+
+    @Test func undoPutsEverythingBack() throws {
+        let p = person(lastLoggedDaysAgo: 30)
+        let previousLastLogged = p.lastLoggedAt
+        let hold = calendar.date(byAdding: .day, value: 1, to: now)
+        p.remindOn = hold
+
+        let record = try #require(actions().logQuickAction(.whatsapp, for: p))
+        actions().undo(record)
+
+        #expect(p.lastLoggedAt == previousLastLogged)
+        #expect(p.remindOn == hold)
+        #expect(p.touches?.isEmpty == true)
+    }
+
+    /// Undoing frees the day again, so a mistaken tap doesn't lock the person
+    /// out of a real catch-up until tomorrow.
+    @Test func undoingReleasesTheOncePerDayCap() throws {
+        let p = person(lastLoggedDaysAgo: 30)
+        let record = try #require(actions().logQuickAction(.call, for: p))
+        actions().undo(record)
+        #expect(actions().logQuickAction(.message, for: p) != nil)
+    }
+
     // MARK: - Notify
 
     @Test func notifyChangeSchedulesReachOutAtNextDue() throws {

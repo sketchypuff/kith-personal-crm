@@ -8,11 +8,11 @@ struct TimelineRow: View {
     var body: some View {
         Label {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(entry.title)
                 Text("\(entry.date, format: .dateTime.day().month(.abbreviated).year()) · \(entry.date, format: .relative(presentation: .named))")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                if case .touch(let note?) = entry.kind {
+                if let note = entry.note {
                     Text(note)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -24,9 +24,5 @@ struct TimelineRow: View {
                 .foregroundStyle(entry.isTouch ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
         }
         .accessibilityElement(children: .combine)
-    }
-
-    private var title: String {
-        entry.isTouch ? "Reached out" : "Skipped"
     }
 }

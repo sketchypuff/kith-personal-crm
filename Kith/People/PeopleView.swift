@@ -149,10 +149,12 @@ private extension View {
     PeopleView()
         .modelContainer(SampleData.previewContainer())
         .environment(ContactImageCache())
+        .environment(ContactPhoneCache())
 }
 
 #Preview("Empty") {
     PeopleView()
         .modelContainer(ModelContainerCoordinator.inMemory())
         .environment(ContactImageCache())
+        .environment(ContactPhoneCache())
 }

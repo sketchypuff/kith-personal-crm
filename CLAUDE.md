@@ -63,6 +63,20 @@ xcrun simctl launch booted com.yashshenai.kith -kith-seed-sample
 
 Do not pass `CODE_SIGNING_ALLOWED=NO`: it strips the App Group entitlement and SwiftData traps at launch. Simulator ad-hoc signing needs no team.
 
+The seed runs **only against an empty store**, so editing `SampleData` and re-running does nothing until the data is wiped — use `scripts/run.sh --fresh`.
+
+Every sample person has `linkedContactID: ""`, which means nothing sourced from Contacts ever appears in the seeded simulator: no photos, and no Call/Message/WhatsApp row. That is correct behaviour, not a bug, and it makes those surfaces invisible to a casual look at the sim. To see them, add someone through Add Contact (the simulator ships ~300 sample cards), or temporarily point a sample person's `linkedContactID` at a real one. A local card's `CNContact.identifier` is the bare `guid` from the simulator's address book, with no `:ABPerson` suffix:
+
+```bash
+sqlite3 ~/Library/Developer/CoreSimulator/Devices/<UDID>/data/Library/AddressBook/AddressBook.sqlitedb \
+  "select First, Last, guid from ABPerson limit 5;"
+
+# Skip the permission prompt (kills the app, so grant before launching)
+xcrun simctl privacy booted grant contacts com.yashshenai.kith
+```
+
+A stuck system alert — one left behind when the app is killed mid-prompt — survives relaunch and blocks everything behind it. Shut the device down and boot it again to clear it.
+
 ### Releasing to TestFlight
 
 `ExportOptions.plist` at the repo root drives the upload; every key in it is one `xcodebuild -help` documents.
@@ -89,7 +103,8 @@ Uploading authenticates as the Apple ID in Xcode's Accounts settings. Without on
 - **Add Contact** flow (`Kith/AddContact`): picker → duplicate guard → Setup sheet.
 - **People** roster end to end (`Kith/People`): in-memory A–Z sectioning (`PeopleRoster`), search, the tag pill row, three empty states, and the app's only delete (`PeopleActions`). The overdue-only filter and its menu were removed when the pill row landed; Overdue now lives in the Upcoming title dropdown. The swipe Delete button is red-tinted but deliberately **not** `role: .destructive` — a destructive swipe button makes `List` dismiss the row before the confirmation dialog can present.
 - `CatchupStatus` (`Kith/Models`) is the one home for the next-catchup line; the roster row and Contact Detail both derive from it.
-- **Contact Detail** end to end (`Kith/ContactDetail`): header + live Notify editing (bindings write to the model, `ContactDetailActions.notifyDidChange` reschedules the reach-out), Dates with the `KeyDateEditorView` sheet and swipe-to-delete, Tags as rows, debounced Notes, and the read-only Timeline (`TimelineEntry` merges touches + skip markers). `NotificationScheduler` now schedules reach-out and key-date lead/day-of requests; `NotificationRecorder` is the test hook for asserting on IDs and fire dates.
+- **Contact Detail** end to end (`Kith/ContactDetail`): header + live Notify editing (bindings write to the model, `ContactDetailActions.notifyDidChange` reschedules the reach-out), the Call / Message / WhatsApp quick actions, Dates with the `KeyDateEditorView` sheet and swipe-to-delete, Tags as rows, debounced Notes, and the read-only Timeline (`TimelineEntry` merges touches + skip markers, and titles a touch by its `TouchKind`). `NotificationScheduler` now schedules reach-out and key-date lead/day-of requests; `NotificationRecorder` is the test hook for asserting on IDs and fire dates.
+- **Quick actions** (`Kith/ContactDetail/QuickAction*.swift`, `Kith/Contacts/PhoneNumber*.swift`): the number is read live from Contacts by `ContactPhoneCache` and **never stored**, exactly as photos are, so no new attribute and no schema deploy. `PhoneNumberSelection` ranks the card's numbers (iPhone → mobile → main → home → work → first listed); `PhoneNumberFormatter` produces both the `tel:`/`sms:` dial form and the E.164 digits WhatsApp needs, prepending the device region's code from `DiallingCodes` and returning nil rather than guessing. WhatsApp is gated on `canOpenURL`, which needs `LSApplicationQueriesSchemes` in `Kith-Info.plist` — without it the check silently fails and the button just never appears. The mark lives in `WhatsAppGlyph.imageset` as a template so it takes the same tint as the other two rather than WhatsApp green; it's Bootstrap Icons' `bi-whatsapp` (MIT, so redistributable) rather than Meta's own brand pack, which is a trademark behind licence terms. An SF Symbol still stands in if the asset ever goes missing.
 - **Settings** end to end (`Kith/Settings`): one flat `Form` of section views, each bound to `@AppStorage` on `AppPreferences.store`. `SettingsActions` owns the two side effects: the all-people notification pass and the sync rebuild (writes the preference only after `ModelContainerCoordinator.rebuild` succeeds). Notification-preference changes are coalesced in `SettingsView` with a short settle delay before one pass. The developer card's bio, links, and `DeveloperAvatar` image set are placeholders (`DeveloperProfile`).
 - **Privacy lock** (`Kith/Lock`): `AppLockGate` wraps `RootTabView` in `KithApp`; while locked the tab tree is not in the hierarchy at all, so unlocking lands on Upcoming. `AppLockState` is the `scenePhase` state machine (grace period measured from the first resign while unlocked; the switch is snapshotted at resign so enabling the lock during its own Face ID prompt doesn't lock the user out). `LockAuthenticator` is the only `LAContext` wrapper.
 - `NotificationPlanner` (`Kith/Notifications`) is the single home for which requests a person should have and when. Contact Detail and Settings both go through it; `rescheduleAll` sorts by fire date and stops at `pendingLimit` (60), the seed of the rolling scheduler. It is not yet run on launch or background refresh.
@@ -132,8 +147,8 @@ SwiftData + CloudKit private DB forbids things plain SwiftData allows. Every mod
 Sync on/off is a different `ModelConfiguration(cloudKitDatabase: .private("iCloud.com.yashshenai.kith") vs .none)`, not a runtime flag. An app-level `@Observable` coordinator owns the container and republishes it into the environment. Turning sync off leaves the iCloud copy intact.
 
 ### Where actions live (hard boundaries between screens)
-- **Upcoming is the only place a touch is logged.** Logged / Remind me tomorrow / Skip are Upcoming-only (check button + swipe actions); the swipe actions only appear on rows that are due or overdue. The widget's App Intent may also log.
-- **Contact Detail is read-and-configure.** Live inline editing, no Edit/Save mode, no Logged, no delete.
+- **Upcoming's check is the primary place a touch is logged.** Remind me tomorrow / Skip are Upcoming-only (swipe actions, and only on rows that are due or overdue). The widget's App Intent may also log. The one other logging path is Contact Detail's quick actions, below; both go through `TouchLog` (`Kith/Touches`) so the clock rules — reset `lastLoggedAt`, clear the hold, cancel the nudges — can't drift apart.
+- **Contact Detail is read-and-configure, plus the three quick actions.** Live inline editing, no Edit/Save mode, no delete. Call / Message / WhatsApp (`QuickActionsRow`) deep-link into the other app and log a touch as they go, capped at one per person per day and carrying a `TouchKind` so the timeline says how you got in touch. The undo toast is deferred to `scenePhase == .active`: the tap backgrounds the app, so the confirmation can only be read on return. Snooze and skip are still not here.
 - **People roster is find / open / add / remove.** Swipe-to-delete (confirmed, `allowsFullSwipe: false`) is the **only** removal path in the app. No archive.
 - **Settings is app-level defaults and machinery**, never per-person editing. No "reset all" / "delete all".
 - **Add is from Contacts only, one at a time.** No manual entry in v1.
@@ -158,6 +173,13 @@ Sort with `localizedStandardCompare` and section by first letter **in memory** f
 
 ### Contact photos in lists
 Render the monogram immediately; fetch `thumbnailImageData` off the main thread via a shared cache keyed by `linkedContactID` in a per-row `.task(id:)`. Never read image data synchronously in a row body.
+
+### Reading a card back needs permission the picker never asks for
+`CNContactPickerViewController` runs out of process, so it hands back a `CNContact` without ever prompting and without granting anything. Every *later* read of that `linkedContactID` — the photo, the phone number — goes through `CNContactStore` and does need authorization. Without an explicit request the app sits at `.notDetermined` for good and every card silently resolves to nil, which looks like "the feature doesn't work" rather than "access was never granted".
+
+`ContactAccess.ensureGranted()` (`Kith/Contacts`) is the only place Kith asks. Both caches call it instead of reading `authorizationStatus` themselves, and it holds one shared `Task` so a roster drawing twenty linked rows at once produces one prompt, not twenty. The ask is deferred to the first read that needs it rather than fired at launch. `NSContactsUsageDescription` lives in the **build settings** (`INFOPLIST_KEY_NSContactsUsageDescription`, both configs), not in `Kith-Info.plist` — a copy added to the plist is a silent duplicate that loses.
+
+Under `.limited` access only user-selected cards resolve; everything else returns nil and is treated exactly like a card with no number.
 
 ## UI constraints
 

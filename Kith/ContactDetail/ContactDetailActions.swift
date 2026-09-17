@@ -2,8 +2,8 @@ import Foundation
 import SwiftData
 
 /// The contact sheet's mutations: configure cadence, manage dates and tags,
-/// write notes. Nothing here advances the relationship clock — logging,
-/// snoozing, and skipping are Upcoming-only (Contact Detail §8).
+/// write notes, and log the one thing this screen does advance — a quick
+/// action's catch-up. Snoozing and skipping remain Upcoming-only.
 struct ContactDetailActions {
     let context: ModelContext
     let notifications: NotificationScheduler
@@ -21,6 +21,42 @@ struct ContactDetailActions {
             defaultReminderTime: defaultReminderTime,
             notificationsEnabled: notificationsEnabled
         )
+    }
+
+    /// The same clock rules Upcoming's check uses, so a catch-up means the
+    /// same thing wherever it was tapped.
+    private var touchLog: TouchLog {
+        TouchLog(context: context, notifications: notifications)
+    }
+
+    // MARK: - Quick actions
+
+    /// Records a catch-up for a tapped Call / Message / WhatsApp.
+    ///
+    /// Returns nil — writing nothing — when this person already has a touch
+    /// today: a call that rings out followed by a WhatsApp is one catch-up,
+    /// and the timeline shouldn't fill with attempts. The caller still opens
+    /// the other app either way.
+    @discardableResult
+    func logQuickAction(_ action: QuickAction, for person: Person) -> TouchUndoRecord? {
+        let date = now()
+        guard !touchLog.hasTouch(for: person, on: date, calendar: calendar) else { return nil }
+
+        let touch = Touch(date: date)
+        touch.kind = action.touchKind
+        let record = TouchUndoRecord(
+            person: person,
+            touch: touch,
+            previousLastLoggedAt: person.lastLoggedAt,
+            previousRemindOn: person.remindOn
+        )
+        touchLog.apply(record)
+        return record
+    }
+
+    /// Reverses a quick action's catch-up. Safe to call once per record.
+    func undo(_ record: TouchUndoRecord) {
+        touchLog.undo(record)
     }
 
     // MARK: - Notify

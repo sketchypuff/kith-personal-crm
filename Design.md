@@ -62,10 +62,11 @@ There is no colour palette. `AccentColor` is deliberately **empty**, so the tint
 | `.orange` | Overdue or due today — **informative, not alarming** | row subtitles, detail header status |
 | `.red` | Destruction only | Delete swipe tint, the minus glyph in Manage tags |
 
-Two hard rules:
+Three hard rules:
 
 - **Orange is the only status colour.** Nothing is ever green for "on track" or red for "late." Being on track is expressed by the *absence* of orange and by the calm empty state.
 - **Red appears only where something is deleted.** It is never used for errors, warnings, or emphasis.
+- **The accent marks the primary act on a surface, so a surface gets at most one accented group.** A set of equal, secondary affordances is drawn in `.primary` on a neutral fill — the fill is what says "tappable", and the tint is not needed to repeat it. Contact Detail's quick-actions row is the worked example: three accented buttons directly under the name read as the point of the screen, when the point of the screen is the cadence below them. `.bordered` derives *both* its label and its fill from the tint, so neutralising the label means `.foregroundStyle(.primary)` on the `Button` — outside the label, which the style would otherwise repaint, and in place of `.tint(.primary)`, which drags the fill dark with it.
 
 Because status styles have to switch between `.orange`, `.secondary`, and `.tertiary`, they are written as `AnyShapeStyle` computed properties on the view. Follow that shape (`PeopleRow.subtitleStyle` is the canonical one) rather than reaching for `Color`.
 
@@ -333,11 +334,13 @@ These are behavioural, but they are the main reason the UI stays simple, so they
 | Screen | Owns | Never |
 |---|---|---|
 | **Upcoming** | Logging a touch, Remind me tomorrow, Skip | — |
-| **Contact Detail** | Reading and configuring one person | Logging, snoozing, deleting |
+| **Contact Detail** | Reading and configuring one person; the three quick actions, which log as they hand off | Snoozing, skipping, deleting |
 | **People** | Find, open, add, remove | Logging, snoozing, skipping |
 | **Settings** | App-level defaults and machinery; the tag vocabulary | Per-person editing; any "reset all" / "delete all" |
 
 Swipe actions on Upcoming appear **only on rows that are actionable** — holding or skipping a reach-out that isn't due yet would do nothing, so the affordance isn't offered.
+
+Contact Detail's quick actions are the one exception to "logging lives on Upcoming", and they earn it: a tap that opens WhatsApp and records nothing would leave the user to log the same catch-up twice. They are capped at one per person per day, and the undo toast is deferred to the return from the other app, because a toast shown at the moment of handoff is a toast nobody sees.
 
 **Tags never affect cadence.** They are labels for grouping and filtering, and the section footer says so out loud. Tags are created and destroyed in exactly one place (Manage tags); everywhere else is pick-only, from a menu, with no free text.
 

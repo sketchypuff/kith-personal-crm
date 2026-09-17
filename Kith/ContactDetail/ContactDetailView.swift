@@ -16,6 +16,8 @@ struct ContactDetailView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.openURL) private var openURL
+    @Environment(ContactPhoneCache.self) private var phoneNumbers
 
     @State private var now = Date.now
     @State private var segment: ContactDetailSegment = .info
@@ -24,9 +26,25 @@ struct ContactDetailView: View {
     /// `Section` is applied per row and the presentations cancel each other.
     @State private var isManagingTags = false
     @State private var hasDismissedNote = false
+    /// Read from Contacts at render time and never stored, the same way the
+    /// photo is. Nil means no row: no number on the card, or no access.
+    @State private var phoneNumber: String?
+    /// Bumped on every foreground so a number added in Contacts while we were
+    /// away is picked up without a relaunch.
+    @State private var phoneRefresh = 0
+    /// Held while the other app is in front. Tapping a quick action logs
+    /// immediately, but the confirmation can only be read once Kith is back.
+    @State private var pendingUndo: TouchUndoRecord?
+    @State private var undo: TouchUndoRecord?
 
     private var actions: ContactDetailActions {
         ContactDetailActions(context: modelContext, notifications: NotificationScheduler())
+    }
+
+    /// One identity for the number lookup: the card it reads, and the counter
+    /// that forces a re-read.
+    private var phoneLookup: String {
+        "\(person.linkedContactID)#\(phoneRefresh)"
     }
 
     var body: some View {
@@ -46,6 +64,17 @@ struct ContactDetailView: View {
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
+
+                // Left out entirely rather than shown empty: there is nothing
+                // to reach them on, so there is nothing to draw.
+                if let phoneNumber {
+                    Section {
+                        QuickActionsRow(person: person, number: phoneNumber, onTap: reachOut)
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                }
             }
 
             if showsAlreadyInKithNote && !hasDismissedNote {
@@ -82,6 +111,15 @@ struct ContactDetailView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .overlay(alignment: .bottom) {
+            if let undo {
+                UndoToast(message: undo.message) {
+                    undoQuickAction()
+                }
+                .padding(.bottom, 8)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         // Pinned rather than scrolled with the header: a mode switch that
         // scrolls out of sight is a control that hides. Same placement the
         // two feeds give their tag row, and the soft edge is what separates
@@ -99,6 +137,8 @@ struct ContactDetailView: View {
         .scrollEdgeEffectStyle(.soft, for: .top)
         .scrollEdgeEffectStyle(.soft, for: .bottom)
         .animation(.default, value: segment)
+        .animation(.default, value: undo?.id)
+        .animation(.default, value: phoneNumber)
         .navigationTitle(person.name)
         .toolbarTitleDisplayMode(.inline)
         .sheet(isPresented: $isManagingTags) {
@@ -118,9 +158,64 @@ struct ContactDetailView: View {
         .task {
             await dismissNoteAfterDelay()
         }
+        .task(id: phoneLookup) {
+            await loadPhoneNumber()
+        }
+        .task(id: undo?.id) {
+            await dismissUndoAfterDelay()
+        }
     }
 
     // MARK: - Actions
+
+    /// Logs the catch-up, then hands off to the other app. Both happen on the
+    /// tap: the app backgrounds immediately, so there is no "on return" moment
+    /// to write it in, and a tap that opened WhatsApp but recorded nothing
+    /// would be the worse failure.
+    private func reachOut(_ action: QuickAction) {
+        guard let phoneNumber,
+              let url = action.url(number: phoneNumber, region: Locale.current.region?.identifier)
+        else { return }
+
+        // Nil when they've already been caught up with today — a call that
+        // rings out followed by a WhatsApp is one catch-up, not two.
+        let record = actions.logQuickAction(action, for: person)
+        pendingUndo = record
+
+        openURL(url) { opened in
+            // Nothing took the URL, so we never left and there is no return to
+            // wait for. Show the confirmation now rather than leaving a
+            // catch-up logged with no way back.
+            guard !opened, let record else { return }
+            pendingUndo = nil
+            withAnimation { undo = record }
+        }
+    }
+
+    private func undoQuickAction() {
+        guard let record = undo else { return }
+        withAnimation {
+            actions.undo(record)
+            undo = nil
+        }
+    }
+
+    private func loadPhoneNumber() async {
+        if let cached = phoneNumbers.cached(person.linkedContactID) {
+            phoneNumber = cached
+            return
+        }
+        // Left as it was while the fetch runs, so a refresh doesn't flicker
+        // the row out and back in.
+        phoneNumber = await phoneNumbers.number(for: person.linkedContactID)
+    }
+
+    private func dismissUndoAfterDelay() async {
+        guard undo != nil else { return }
+        try? await Task.sleep(for: .seconds(5))
+        guard !Task.isCancelled else { return }
+        withAnimation { undo = nil }
+    }
 
     /// Notify edits write through the binding; this persists and realigns
     /// the reach-out nudge. The header recomputes from the model on its own.
@@ -179,10 +274,25 @@ struct ContactDetailView: View {
         withAnimation { hasDismissedNote = true }
     }
 
-    /// Foregrounding refreshes the clock so the header stays honest.
+    /// Foregrounding refreshes the clock so the header stays honest, and is
+    /// the one moment a quick action's confirmation can actually be read —
+    /// the tap itself left for another app before a toast could be seen.
     private func handleScenePhase(_ phase: ScenePhase) {
-        guard phase == .active else { return }
-        now = .now
+        switch phase {
+        case .active:
+            now = .now
+            // A number added in Contacts while we were away should show up.
+            phoneNumbers.invalidate(person.linkedContactID)
+            phoneRefresh += 1
+            if let record = pendingUndo {
+                pendingUndo = nil
+                withAnimation { undo = record }
+            }
+        case .background:
+            undo = nil
+        default:
+            break
+        }
     }
 }
 
@@ -194,6 +304,7 @@ struct ContactDetailView: View {
     }
     .modelContainer(container)
     .environment(ContactImageCache())
+    .environment(ContactPhoneCache())
 }
 
 #Preview("Never, dates only") {
@@ -204,4 +315,5 @@ struct ContactDetailView: View {
     }
     .modelContainer(container)
     .environment(ContactImageCache())
+    .environment(ContactPhoneCache())
 }
