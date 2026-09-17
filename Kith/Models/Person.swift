@@ -25,6 +25,11 @@ final class Person {
     var tags: [String] = []
     var notes: String = ""
 
+    /// An IANA identifier, set only when the guess from their phone number was
+    /// absent or wrong. Nil means "work it out" — see `PersonTimeZone`.
+    /// Optional, so the CloudKit mirror stays additive.
+    var timeZoneIdentifier: String? = nil
+
     // Clock state
     var lastLoggedAt: Date? = nil        // nil until the first touch
     var remindOn: Date? = nil            // "remind me tomorrow" hold

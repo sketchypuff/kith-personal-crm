@@ -51,6 +51,15 @@ struct ContactDetailView: View {
         let status = person.catchupStatus(at: now)
         let keyDates = DatesSection.ordered(person.keyDates ?? [], now: now)
         let timeline = TimelineEntry.build(for: person)
+        // Two readings of the same fact: the header shows only what's worth
+        // showing, while the Notify row needs the raw guess to say what
+        // Automatic would pick.
+        let guessedTimeZone = PersonTimeZone.guess(number: phoneNumber)
+        let resolvedTimeZone = PersonTimeZone.resolve(
+            identifier: person.timeZoneIdentifier,
+            number: phoneNumber,
+            now: now
+        )
 
         List {
             // Info only. The timeline is history, and the identity band above
@@ -59,7 +68,12 @@ struct ContactDetailView: View {
             // that produce it.
             if segment == .info {
                 Section {
-                    ContactDetailHeader(person: person, status: status, now: now)
+                    ContactDetailHeader(
+                        person: person,
+                        status: status,
+                        now: now,
+                        timeZone: resolvedTimeZone?.timeZone
+                    )
                 }
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
@@ -86,7 +100,7 @@ struct ContactDetailView: View {
 
             switch segment {
             case .info:
-                NotifySection(person: person)
+                NotifySection(person: person, guessedTimeZone: guessedTimeZone)
 
                 DatesSection(
                     keyDates: keyDates,
@@ -152,6 +166,7 @@ struct ContactDetailView: View {
         .onChange(of: person.cadenceRaw) { notifyDidChange() }
         .onChange(of: person.notifyDayRaw) { notifyDidChange() }
         .onChange(of: person.notifyTime) { notifyDidChange() }
+        .onChange(of: person.timeZoneIdentifier) { timeZoneDidChange() }
         .onChange(of: scenePhase) { _, phase in
             handleScenePhase(phase)
         }
@@ -222,6 +237,14 @@ struct ContactDetailView: View {
     private func notifyDidChange() {
         withAnimation {
             actions.notifyDidChange(person)
+        }
+    }
+
+    /// The timezone only changes what the header reads, never when anything
+    /// fires, so this persists and stops there.
+    private func timeZoneDidChange() {
+        withAnimation {
+            actions.timeZoneDidChange(person)
         }
     }
 

@@ -13,6 +13,7 @@ Each heading is a version of the app, with the TestFlight build number beside it
 ### Added
 
 - Call, Message, and WhatsApp buttons now sit under a person's name, so you can reach them without going hunting for their number. Tapping one counts as catching up with them, and their timeline remembers which way you got in touch.
+- A person's local time now shows under their name, so you can see at a glance whether it's a reasonable hour to try them. Kith works out where they are from the country code on their phone number — nothing to set up. Countries that keep more than one time, like the United States and Australia, can't be worked out from a number alone, so nothing is shown for them until you say where someone is. You can set or correct anyone's timezone yourself under Notify.
 
 ### Changed
 

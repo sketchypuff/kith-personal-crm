@@ -14,7 +14,7 @@ Everything else in this document is a consequence of these.
 2. **Calm over urgent.** This is an app about people you like. Nothing shames, counts down, or turns red. Overdue is *information*, rendered in secondary orange (`UpcomingRow.subtitleStyle`, `PeopleRow.subtitleStyle`, `ContactDetailHeader.statusStyle`), never a red badge and never a scolding sentence.
 3. **One row, one tap.** Every row in the feed resolves with a single tap on a single control. Secondary acts hide in swipes and menus; they never compete with the primary one.
 4. **The screen tells the truth.** A filtered list says which filter it is under (`.navigationSubtitle(horizon.label)`); an empty list says *why* it is empty (`UpcomingEmptyView` has six distinct states); a destructive dialog says exactly what it will touch (`ManageTagsView.deletionWarning`). The app never lets a quiet control silently change what you are looking at.
-5. **Free accessibility is the point of using system components.** Dark mode, Dynamic Type, VoiceOver, and Reduce Motion must all work without a single bespoke branch. When a component is hand-laid-out (there is exactly one — see §5.4), it pays for itself by still being made of stock `Button`s.
+5. **Free accessibility is the point of using system components.** Dark mode, Dynamic Type, VoiceOver, and Reduce Motion must all work without a single bespoke branch. When a component is hand-laid-out (there is exactly one — see §5.5), it pays for itself by still being made of stock `Button`s.
 
 ---
 
@@ -41,7 +41,7 @@ Only semantic text styles are used, so Dynamic Type is automatic. The whole voca
 | `.title2` | Contact Detail name; the check glyph (`UpcomingCheckButton`) |
 | `.headline` | The label on a `.controlSize(.large)` empty-state button |
 | `.body` | Every row's primary line (`UpcomingRow`, `PeopleRow`) |
-| `.subheadline` | Every secondary line: status, timeline dates, notes, tag pills, toast |
+| `.subheadline` | Every secondary line: status, local time, timeline dates, notes, tag pills, toast |
 | `.footnote.bold()` | Disclosure chevrons drawn by hand (`AboutSection`, `ManageTagsRow`) |
 | `.largeTitle` | The privacy overlay glyph only |
 
@@ -245,11 +245,23 @@ Only Upcoming's row has a trailing control. **The roster row deliberately has no
 
 **Never read image data synchronously in a row body.** Photos are referenced from Contacts at render time and never stored or synced.
 
-### 5.3 The check button
+### 5.3 The Contact Detail header
+
+`ContactDetailHeader` is avatar, name, and up to two lines under it: the next-catchup line, then local time when we know where someone is.
+
+**The catch-up line is still the only *status* here**, and the only tinted one. Local time is `.secondary` and says nothing about the relationship — it sits under the status because it answers the question the status provokes, which is whether now is a reasonable hour to try. A second *status* would be a mistake; a second fact is not.
+
+Both lines are `.subheadline`. They read as one block — how are we doing, and is now a sane hour — so stepping local time down a size would rank it below a status it is meant to sit beside, and the block would look like a heading with a caption rather than two facts of equal standing. Tint, not size, is what separates them: the status can go orange, local time never does. A `globe.badge.clock` mark leads the line, which is what makes it legible as a *place's* time rather than another date belonging to the row above.
+
+**Use an `HStack`, not a `Label`, for an icon beside centred text in a list row.** The header is a row inside the detail `List`, and `Label` there reserves an icon column sized to align icons down a settings screen. That is right for rows and wrong for a single centred phrase, which ends up with the mark floating far from its words. `.labelStyle(.titleAndIcon)` does not undo it — the column survives the style. `LocalTimeLabel` uses `HStack(spacing: 6)`, which is what a `Label` gives when nothing reserves a column for it, and hides the mark from VoiceOver so the text carries the line.
+
+Local time is the app's one `TimelineView`, at `.everyMinute`. It earns it: every other surface refreshes its sense of now when the scene becomes active (§6.3), and that is enough for a date but not for a clock, which would otherwise read 9:04 PM for as long as the screen stayed open. The wording is derived in `PersonTimeZone` so a view never formats an offset itself, the same way `CatchupStatus` owns the line above it.
+
+### 5.4 The check button
 
 `UpcomingCheckButton` is stateless by design: the row animates out on tap, and an undone row must come back showing the empty circle. `checkmark.circle` at `.title2`, `.tint`, a 44×44 minimum frame, `.buttonStyle(.borderless)`, and an explicit `.accessibilityLabel` naming the person and the act.
 
-### 5.4 The tag pill row
+### 5.5 The tag pill row
 
 `TagPillRow` is **the app's only `ScrollView`**, and the only hand-laid-out component. It exists because no system component fits: a segmented picker can't scroll and forces equal widths. It earns the exception by being made entirely of stock `Button`s in `.glass` / `.glassProminent` with `.buttonBorderShape(.capsule)`.
 
@@ -262,18 +274,18 @@ Its details are all load-bearing:
 - `.scrollIndicators(.hidden)`, and `scrollTo(anchor: .center)` on selection.
 - **Tapping the lit pill clears it**, same as tapping All.
 - `.accessibilityAddTraits(isSelected ? [.isSelected] : [])` — the one thing a plain `Button` won't say for itself.
-- It lives in `.safeAreaInset(edge: .top, spacing: 0)`, so it pins under the toolbar and the list scrolls beneath it (§5.7).
+- It lives in `.safeAreaInset(edge: .top, spacing: 0)`, so it pins under the toolbar and the list scrolls beneath it (§5.8).
 - It hides itself entirely when there are no tags.
 
 Each tab keeps its own selection, and both clear it when the last person carrying that tag is untagged. If you add a third filterable surface, reuse this component; do not build a variant.
 
-### 5.5 The undo toast
+### 5.6 The undo toast
 
 `UndoToast` — a `.glassEffect(.regular, in: .capsule)` capsule, `.overlay(alignment: .bottom)`, 8 pt off the edge, 5-second auto-dismiss via a cancellable `.task(id: undo?.id)`. Backgrounding commits the action and clears the toast. It carries **no shadow**: glass draws its own, and the app has no custom shadows (§9). The "Undo" button inside stays a plain text button — glass nested inside glass is the overdone look §2.4 exists to prevent.
 
 **Undo is offered for the check, and only the check**, because that is the one action that moves a person's clock forward from a single tap. Skip and Remind me tomorrow are reversible in other ways; delete is confirmed instead.
 
-### 5.6 Progressive disclosure
+### 5.7 Progressive disclosure
 
 Controls disappear when they have nothing to do, rather than sitting disabled:
 
@@ -286,7 +298,7 @@ Controls disappear when they have nothing to do, rather than sitting disabled:
 
 The distinction: **hide a control that has nothing to act on; disable a control whose value still matters.**
 
-### 5.7 Pinned top controls
+### 5.8 Pinned top controls
 
 A control that scopes or switches what the list below it shows **pins in `.safeAreaInset(edge: .top, spacing: 0)`** rather than scrolling with the content, and the list gets `.scrollEdgeEffectStyle(.soft, for: .top)` so content softens under it instead of cutting against it.
 

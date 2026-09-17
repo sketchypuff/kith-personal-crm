@@ -73,6 +73,14 @@ struct ContactDetailActions {
         planner.rescheduleReachOut(for: person)
     }
 
+    /// Call after the timezone changes. Display-only: a person's local time
+    /// says nothing about when their reminder should fire, so nothing is
+    /// rescheduled — the nudge still arrives at the hour the reader picked, in
+    /// the reader's own day.
+    func timeZoneDidChange(_ person: Person) {
+        save()
+    }
+
     // MARK: - Key dates
 
     @discardableResult

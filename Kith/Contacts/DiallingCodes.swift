@@ -17,6 +17,43 @@ nonisolated enum DiallingCodes {
         ["IT", "VA"].contains(region.uppercased())
     }
 
+    /// The region a full international number belongs to, read off its leading
+    /// calling code. `digits` is E.164 digits with no `+`.
+    ///
+    /// Longest prefix wins, so `376…` is Andorra rather than a code starting
+    /// `3`. Codes several regions share resolve to the one in `primaries`, and
+    /// the North American codes beyond the US and Canada — Jamaica, Barbados,
+    /// the Bahamas — can't be told apart at all, because every one of them is
+    /// plain `1` in this table. They come back as `US`, which keeps no single
+    /// time and so resolves to no timezone: absent rather than wrong.
+    static func region(forInternationalDigits digits: String) -> String? {
+        for length in stride(from: min(maxCodeLength, digits.count), through: 1, by: -1) {
+            if let region = regionsByCode[String(digits.prefix(length))] { return region }
+        }
+        return nil
+    }
+
+    /// Which region owns a calling code more than one region dials with. Every
+    /// choice here is the most populous holder of the code.
+    private static let primaries: [String: String] = [
+        "1": "US", "7": "RU", "39": "IT", "44": "GB", "47": "NO", "61": "AU",
+        "212": "MA", "262": "RE", "358": "FI", "590": "GP", "599": "CW", "672": "NF",
+    ]
+
+    private static let maxCodeLength = 3
+
+    /// The table inverted. Regions are walked in sorted order so a collision
+    /// `primaries` doesn't cover still resolves the same way every launch,
+    /// rather than however the dictionary happened to hash.
+    private static let regionsByCode: [String: String] = {
+        var map = primaries
+        for region in table.keys.sorted() {
+            guard let code = table[region], map[code] == nil else { continue }
+            map[code] = region
+        }
+        return map
+    }()
+
     private static let table: [String: String] = [
         "AD": "376", "AE": "971", "AF": "93", "AG": "1", "AI": "1", "AL": "355",
         "AM": "374", "AO": "244", "AQ": "672", "AR": "54", "AS": "1", "AT": "43",
